@@ -79,6 +79,11 @@ app.use('/css', express.static(path.join(rootDir, 'css'), staticOptions));
 app.use('/js', express.static(path.join(rootDir, 'js'), staticOptions));
 app.use('/assets', express.static(path.join(rootDir, 'assets'), staticOptions));
 
+app.get('/styles.css', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(rootDir, 'styles.css'));
+});
+
 app.use('/api', (_req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
