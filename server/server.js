@@ -120,7 +120,7 @@ async function start() {
     const shouldSeed = process.env.SEED_ON_START === 'true' ||
       (process.env.NODE_ENV !== 'production' && process.env.SEED_ON_START !== 'false');
     if (shouldSeed) {
-      await seedDatabase({ allowAdmin: process.env.NODE_ENV !== 'production' });
+      await seedDatabase({ allowAdmin: Boolean(process.env.ADMIN_PASSWORD) });
     }
 
     app.listen(PORT, () => {
