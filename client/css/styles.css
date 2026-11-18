@@ -1282,9 +1282,6 @@ td .btn {
   width: 34px;
   height: 40px;
   object-fit: contain;
-  padding: 3px;
-  background: var(--paper);
-  border: 2px solid var(--canvas);
 }
 
 /* Responsive upgrades */

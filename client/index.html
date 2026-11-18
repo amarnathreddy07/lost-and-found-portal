@@ -6,6 +6,19 @@
   <meta name="theme-color" content="#F4F3EE" />
   <meta name="description" content="Campus Lost and Found Portal for Sai University — report, search and claim campus items." />
   <title>SAI LOST &amp; FOUND — Campus Portal</title>
+  <link id="favicon" rel="icon" type="image/png" href="/assets/saiu-logo-bw.png" />
+  <script>
+    (function () {
+      var favicon = document.getElementById('favicon');
+      var dark = window.matchMedia('(prefers-color-scheme: dark)');
+      function updateFavicon() {
+        favicon.href = dark.matches ? '/assets/saiu-logo-white.png' : '/assets/saiu-logo-bw.png';
+      }
+      updateFavicon();
+      if (dark.addEventListener) dark.addEventListener('change', updateFavicon);
+      else if (dark.addListener) dark.addListener(updateFavicon);
+    })();
+  </script>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
@@ -229,8 +242,8 @@
   <footer class="site-footer">
     <div class="shell footer-inner">
       <div class="footer-brand">
-        <img src="/assets/saiu-logo-bw.png" alt="Sai University" />
-        <strong>SAI UNIVERSITY // LOST &amp; FOUND</strong>
+        <img src="/assets/saiu-logo-white.png" alt="Sai University" />
+        <strong>SAI UNIVERSITY - LOST &amp; FOUND PORTAL</strong>
       </div>
       <span>BUILT FOR STUDENTS. RUN BY STUDENTS.</span>
     </div>
