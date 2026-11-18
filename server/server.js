@@ -35,6 +35,7 @@ const corsOrigin = allowedOrigins.length
     ? [`http://localhost:${PORT}`]
     : true;
 
+app.set('trust proxy', 1);
 app.set('query parser', 'simple');
 app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
