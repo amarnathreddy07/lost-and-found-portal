@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "framework": null,
+  "installCommand": "npm install --prefix server",
+  "builds": [
+    { "src": "server/api/index.js", "use": "@vercel/node" },
+    { "src": "client/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "server/api/index.js" },
+    { "src": "/uploads/(.*)", "dest": "server/api/index.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
