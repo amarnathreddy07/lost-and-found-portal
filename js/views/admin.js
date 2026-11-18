@@ -157,104 +157,167 @@ function activateAdminTab(tabName) {
 }
 
 async function openCreateUser() {
-  const modal = openModal({ title: 'CREATE USER', body: '<p class="mono-note">LOADING PRELOADED EMAILS...</p>' });
+  const modal = openModal({ title: 'CREATE USER', body: '<p class="mono-note">LOADING PRELOADED PROFILES...</p>' });
+  let available = [];
+  let initialPassword = '';
+  let preloadedError = '';
 
   try {
     const response = await api.admin.preloadedUsers();
-    const entries = response.users || [];
-    const available = sortStudents(entries.filter((entry) => !entry.created));
+    available = sortStudents((response.users || []).filter((entry) => !entry.created));
+    initialPassword = response.initialPassword || '';
+  } catch (error) {
+    preloadedError = error.message;
+  }
 
-    if (!available.length) {
-      modal.body.innerHTML = '<div class="inline-notice">ALL PRELOADED EMAILS ALREADY HAVE ACCOUNTS.</div>';
+  const years = [...new Set(available.map((entry) => studentMeta(entry.email).gradYear).filter(Boolean))];
+  modal.body.innerHTML = `<p class="hint">${initialPassword
+    ? `The initial password is <strong>${escapeHtml(initialPassword)}</strong> and the user must change it at first sign-in.`
+    : 'The user must change their temporary password at first sign-in.'}</p>
+    ${preloadedError ? `<div class="inline-notice">QUICK FILL UNAVAILABLE — ${escapeHtml(preloadedError)}</div>` : ''}
+    ${!available.length && !preloadedError ? '<div class="inline-notice">NO UNUSED PRELOADED PROFILES. ENTER DETAILS MANUALLY.</div>' : ''}
+    <form id="create-user-form" style="margin-top:14px">
+      <div class="mono-note" style="margin-bottom:12px">OPTIONAL QUICK FILL</div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-year">GRAD YEAR</label>
+        <select id="create-year" ${available.length ? '' : 'disabled'}>
+          <option value="">ALL GRAD YEARS</option>
+          ${years.map((year) => `<option value="${year}">${year}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-department-filter">DEPARTMENT FILTER</label>
+        <select id="create-department-filter" disabled>
+          <option value="">ALL DEPARTMENTS</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-profile">PRELOADED PROFILE</label>
+        <select id="create-profile" ${available.length ? '' : 'disabled'}>
+          <option value="">ENTER DETAILS MANUALLY</option>
+          ${available.map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name)} — ${escapeHtml(entry.email)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-name">FULL NAME <span class="required">*</span></label>
+        <input id="create-name" name="name" type="text" autocomplete="name" required />
+        <small class="error-text" data-error="name"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-email">UNIVERSITY EMAIL <span class="required">*</span></label>
+        <input id="create-email" name="email" type="email" autocomplete="email" placeholder="name.initial-YY@department.saiuniversity.edu.in" required />
+        <small class="error-text" data-error="email"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-student-id">PRN / STUDENT ID</label>
+        <input id="create-student-id" name="studentId" type="text" />
+        <small class="error-text" data-error="studentId"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-department">DEPARTMENT</label>
+        <input id="create-department" name="department" type="text" />
+        <small class="error-text" data-error="department"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="create-phone">PHONE</label>
+        <input id="create-phone" name="phone" type="tel" />
+        <small class="error-text" data-error="phone"></small>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-cancel>CANCEL</button>
+        <button class="btn btn-accent" type="submit">CREATE ACCOUNT</button>
+      </div>
+    </form>`;
+
+  const form = $('#create-user-form', modal.body);
+  const yearSelect = $('#create-year', form);
+  const departmentFilter = $('#create-department-filter', form);
+  const profileSelect = $('#create-profile', form);
+  const submit = $('button[type="submit"]', form);
+  const fields = {
+    name: $('#create-name', form),
+    email: $('#create-email', form),
+    studentId: $('#create-student-id', form),
+    department: $('#create-department', form),
+    phone: $('#create-phone', form)
+  };
+
+  const visibleEntries = () => available.filter((entry) => {
+    const meta = studentMeta(entry.email);
+    return (!yearSelect.value || meta.gradYear === Number(yearSelect.value))
+      && (!departmentFilter.value || meta.department === departmentFilter.value);
+  });
+
+  const refreshProfiles = () => {
+    const visible = visibleEntries();
+    const selected = profileSelect.value;
+    profileSelect.innerHTML = `<option value="">ENTER DETAILS MANUALLY</option>${visible
+      .map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name)} — ${escapeHtml(entry.email)}</option>`).join('')}`;
+    profileSelect.value = visible.some((entry) => entry.email === selected) ? selected : '';
+  };
+
+  const refreshDepartments = () => {
+    const departments = yearSelect.value
+      ? [...new Set(available
+        .filter((entry) => studentMeta(entry.email).gradYear === Number(yearSelect.value))
+        .map((entry) => studentMeta(entry.email).department)
+        .filter(Boolean))].sort()
+      : [];
+    departmentFilter.innerHTML = `<option value="">ALL DEPARTMENTS</option>${departments
+      .map((department) => `<option value="${escapeHtml(department)}">${escapeHtml(department)}</option>`).join('')}`;
+    departmentFilter.value = '';
+    departmentFilter.disabled = !yearSelect.value;
+    refreshProfiles();
+  };
+
+  profileSelect.addEventListener('change', () => {
+    const entry = available.find((item) => item.email === profileSelect.value);
+    if (!entry) return;
+    fields.name.value = entry.name || '';
+    fields.email.value = entry.email || '';
+    fields.studentId.value = entry.studentId || '';
+    fields.department.value = entry.department || studentMeta(entry.email).department || '';
+    fields.phone.value = entry.phone || '';
+  });
+  fields.email.addEventListener('blur', () => {
+    if (!fields.department.value.trim()) fields.department.value = studentMeta(fields.email.value).department || '';
+  });
+  yearSelect.addEventListener('change', refreshDepartments);
+  departmentFilter.addEventListener('change', refreshProfiles);
+  refreshProfiles();
+
+  $('[data-cancel]', modal.body).addEventListener('click', () => modal.close());
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearFormErrors(form);
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.name = String(payload.name || '').trim();
+    payload.email = String(payload.email || '').trim().toLowerCase();
+    payload.studentId = String(payload.studentId || '').trim();
+    payload.department = String(payload.department || '').trim();
+    payload.phone = String(payload.phone || '').trim();
+    const errors = [];
+    if (payload.name.length < 2) errors.push({ field: 'name', message: 'Enter the full name.' });
+    if (!/^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i.test(payload.email)) {
+      errors.push({ field: 'email', message: 'Use name.initial-YY@department.saiuniversity.edu.in.' });
+    }
+    if (errors.length) {
+      showFieldErrors(form, errors);
       return;
     }
 
-    const years = [...new Set(available.map((entry) => studentMeta(entry.email).gradYear).filter(Boolean))];
-    modal.body.innerHTML = `<p class="hint">Emails are sorted by graduation year, then department. The initial password is <strong>${escapeHtml(response.initialPassword)}</strong> and the user must change it at first sign-in.</p>
-      <form id="create-user-form" style="margin-top:14px">
-        <div class="field" style="margin-bottom:14px">
-          <label for="create-year">GRAD YEAR</label>
-          <select id="create-year">
-            <option value="">ALL GRAD YEARS</option>
-            ${years.map((year) => `<option value="${year}">${year}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:14px">
-          <label for="create-department">DEPARTMENT</label>
-          <select id="create-department" disabled>
-            <option value="">ALL DEPARTMENTS</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:14px">
-          <label for="create-email">PRELOADED EMAIL <span class="required">*</span></label>
-          <select id="create-email" name="email" required></select>
-          <small class="error-text" data-error="email"></small>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-outline" type="button" data-cancel>CANCEL</button>
-          <button class="btn btn-accent" type="submit">CREATE ACCOUNT</button>
-        </div>
-      </form>`;
-
-    const form = $('#create-user-form', modal.body);
-    const yearSelect = $('#create-year', form);
-    const departmentSelect = $('#create-department', form);
-    const emailSelect = $('#create-email', form);
-    const submit = $('button[type="submit"]', form);
-
-    const visibleEntries = () => available.filter((entry) => {
-      const meta = studentMeta(entry.email);
-      return (!yearSelect.value || meta.gradYear === Number(yearSelect.value))
-        && (!departmentSelect.value || meta.department === departmentSelect.value);
-    });
-
-    const refreshEmailOptions = () => {
-      const visible = visibleEntries();
-      emailSelect.innerHTML = visible.length
-        ? visible.map((entry) => `
-          <option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name)} — ${escapeHtml(entry.email)}</option>`).join('')
-        : '<option value="">NO MATCHING EMAILS</option>';
-      submit.disabled = !visible.length;
-    };
-
-    const refreshDepartments = () => {
-      const departments = yearSelect.value
-        ? [...new Set(available
-          .filter((entry) => studentMeta(entry.email).gradYear === Number(yearSelect.value))
-          .map((entry) => studentMeta(entry.email).department)
-          .filter(Boolean))].sort()
-        : [];
-      departmentSelect.innerHTML = `<option value="">ALL DEPARTMENTS</option>${departments
-        .map((department) => `<option value="${escapeHtml(department)}">${escapeHtml(department)}</option>`).join('')}`;
-      departmentSelect.value = '';
-      departmentSelect.disabled = !yearSelect.value;
-      refreshEmailOptions();
-    };
-
-    yearSelect.addEventListener('change', refreshDepartments);
-    departmentSelect.addEventListener('change', refreshEmailOptions);
-    refreshEmailOptions();
-
-    $('[data-cancel]', modal.body).addEventListener('click', () => modal.close());
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      clearFormErrors(form);
-      setLoading(submit, true);
-      try {
-        const result = await api.admin.createUser(emailSelect.value);
-        modal.close();
-        toast(result.message, 'success');
-        await activateAdminTab('users');
-      } catch (error) {
-        if (error.details?.length) showFieldErrors(form, error.details);
-        toast(error.message, 'error');
-        setLoading(submit, false);
-      }
-    });
-  } catch (error) {
-    modal.body.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
-    toast(error.message, 'error');
-  }
+    setLoading(submit, true);
+    try {
+      const result = await api.admin.createUser(payload);
+      modal.close();
+      toast(result.message, 'success');
+      await activateAdminTab('users');
+    } catch (error) {
+      if (error.details?.length) showFieldErrors(form, error.details);
+      toast(error.message, 'error');
+      setLoading(submit, false);
+    }
+  });
 }
 
 function resultList(title, entries) {

@@ -4,6 +4,7 @@ const adminController = require('../controllers/adminController');
 const { protect, requireAdmin } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validate');
 const { csvUpload } = require('../config/upload');
+const { UNIVERSITY_EMAIL_PATTERN } = require('../config/accounts');
 const Item = require('../models/Item');
 
 const router = express.Router();
@@ -18,7 +19,12 @@ router.get('/items', [
 router.get('/users', adminController.users);
 router.get('/users/preloaded', adminController.preloadedUsers);
 router.post('/users', [
-  body('email').isEmail().withMessage('Choose a valid preloaded email.')
+  body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Name must be 2-80 characters.'),
+  body('email').trim().toLowerCase().isEmail().withMessage('Enter a valid email address.')
+    .matches(UNIVERSITY_EMAIL_PATTERN).withMessage('Use name.initial-YY@department.saiuniversity.edu.in.'),
+  body('studentId').optional({ checkFalsy: true }).trim().isLength({ max: 30 }).withMessage('PRN is too long.'),
+  body('department').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).withMessage('Department is too long.'),
+  body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).withMessage('Phone number is too long.')
 ], handleValidationErrors, adminController.createUser);
 router.post('/users/import', csvUpload.single('file'), adminController.importUsers);
 router.post('/users/:id/reset-password', [

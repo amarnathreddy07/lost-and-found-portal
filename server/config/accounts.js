@@ -1,4 +1,5 @@
 const DEFAULT_USER_PASSWORD = process.env.DEFAULT_USER_PASSWORD || 'Student@123';
+const UNIVERSITY_EMAIL_PATTERN = /^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i;
 
 const PRELOADED_USERS = [
   {
@@ -38,4 +39,4 @@ function findPreloadedUser(email) {
   return PRELOADED_USERS.find((entry) => entry.email === normalized) || null;
 }
 
-module.exports = { DEFAULT_USER_PASSWORD, PRELOADED_USERS, departmentFromEmail, findPreloadedUser };
+module.exports = { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail, findPreloadedUser };

@@ -8,10 +8,9 @@ const Claim = require('../models/Claim');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 const { uploadDir } = require('../config/upload');
-const { DEFAULT_USER_PASSWORD, PRELOADED_USERS, departmentFromEmail, findPreloadedUser } = require('../config/accounts');
+const { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail } = require('../config/accounts');
 const { parseUserCsv } = require('../utils/csv');
 
-const UNIVERSITY_EMAIL_PATTERN = /^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i;
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).+$/;
 
 exports.stats = asyncHandler(async (_req, res) => {
@@ -75,18 +74,20 @@ exports.preloadedUsers = asyncHandler(async (_req, res) => {
 });
 
 exports.createUser = asyncHandler(async (req, res) => {
-  const profile = findPreloadedUser(req.body.email);
-  if (!profile) throw new ApiError(400, 'Choose an email from the preloaded list.');
+  const email = String(req.body.email || '').toLowerCase().trim();
+  if (!UNIVERSITY_EMAIL_PATTERN.test(email)) {
+    throw new ApiError(400, 'Use name.initial-YY@department.saiuniversity.edu.in.');
+  }
 
-  const existing = await User.findOne({ email: profile.email });
+  const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, 'An account with this email already exists.');
 
   const user = await User.create({
-    name: profile.name,
-    email: profile.email,
-    studentId: profile.studentId || '',
-    department: departmentFromEmail(profile.email),
-    phone: '',
+    name: String(req.body.name || '').trim().slice(0, 80) || nameFromEmail(email),
+    email,
+    studentId: String(req.body.studentId || '').trim().slice(0, 30),
+    department: String(req.body.department || '').trim().slice(0, 40) || departmentFromEmail(email),
+    phone: String(req.body.phone || '').trim().slice(0, 20),
     password: await bcrypt.hash(DEFAULT_USER_PASSWORD, 12),
     role: 'user',
     mustChangePassword: true
@@ -102,6 +103,7 @@ exports.createUser = asyncHandler(async (req, res) => {
       email: user.email,
       studentId: user.studentId,
       department: user.department,
+      phone: user.phone,
       role: user.role,
       mustChangePassword: true
     }

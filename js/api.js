@@ -102,7 +102,7 @@ export const api = {
     items: () => request('/admin/items'),
     users: () => request('/admin/users'),
     preloadedUsers: () => request('/admin/users/preloaded'),
-    createUser: (email) => request('/admin/users', { method: 'POST', body: { email } }),
+    createUser: (payload) => request('/admin/users', { method: 'POST', body: payload }),
     importUsers: (file) => {
       const formData = new FormData();
       formData.append('file', file);
