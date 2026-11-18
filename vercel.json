@@ -1,15 +1,17 @@
 {
+  "$schema": "openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": null,
   "installCommand": "npm install --prefix server",
-  "builds": [
-    { "src": "server/api/index.js", "use": "@vercel/node" },
-    { "src": "client/**", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "server/api/index.js" },
-    { "src": "/uploads/(.*)", "dest": "server/api/index.js" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "outputDirectory": "client",
+  "functions": {
+    "server/api/index.js": {
+      "includeFiles": "client/**",
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/server/api/index.js" },
+    { "source": "/uploads/(.*)", "destination": "/server/api/index.js" }
   ]
 }
