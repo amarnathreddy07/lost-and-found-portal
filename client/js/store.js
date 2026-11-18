@@ -2,7 +2,10 @@ const USER_KEY = 'sai_lf_user';
 
 function loadUser() {
   try {
-    return JSON.parse(localStorage.getItem(USER_KEY)) || null;
+    const value = JSON.parse(localStorage.getItem(USER_KEY));
+    if (!value || typeof value.id !== 'string' || typeof value.name !== 'string') return null;
+    if (!['user', 'admin'].includes(value.role)) return null;
+    return value;
   } catch (_error) {
     return null;
   }
@@ -17,6 +20,10 @@ export const state = {
   adminTab: 'items',
   editingItem: null,
   page: 1,
+  pendingView: '',
+  listSeq: 0,
+  dashboardSeq: 0,
+  adminSeq: 0,
   filters: {
     q: '',
     type: '',

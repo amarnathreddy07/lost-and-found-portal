@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const claimController = require('../controllers/claimController');
-const { protect, requireAdmin } = require('../middleware/auth');
+const { protect, requireAdmin, ownerOrAdmin } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validate');
 const Item = require('../models/Item');
 
@@ -14,7 +14,7 @@ router.get('/mine', claimController.mine);
 router.get('/received', claimController.received);
 router.get('/item/:itemId', [
   param('itemId').isMongoId().withMessage('Invalid item identifier.')
-], handleValidationErrors, claimController.forItem);
+], handleValidationErrors, ownerOrAdmin('itemId'), claimController.forItem);
 
 router.post('/', [
   body('itemId').isMongoId().withMessage('Select a valid item.'),

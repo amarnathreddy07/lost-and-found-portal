@@ -41,6 +41,17 @@ exports.received = asyncHandler(async (req, res) => {
   res.json({ success: true, claims });
 });
 
+async function syncItemStatus(itemId) {
+  const approved = await Claim.exists({ item: itemId, status: 'approved' });
+  const item = await Item.findById(itemId);
+  if (!item) return;
+
+  if (approved && item.status !== 'claimed') item.status = 'claimed';
+  else if (!approved && item.status === 'claimed') item.status = 'active';
+
+  if (item.isModified('status')) await item.save();
+}
+
 exports.forItem = asyncHandler(async (req, res) => {
   const claims = await Claim.find({ item: req.params.itemId })
     .sort({ createdAt: -1 })
@@ -60,6 +71,10 @@ exports.review = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Only the item owner or an admin can review this claim.');
   }
 
+  if (claim.status !== 'pending') {
+    throw new ApiError(409, 'This claim has already been reviewed.');
+  }
+
   const { decision } = req.body;
   claim.status = decision;
   claim.reviewedAt = new Date();
@@ -68,15 +83,12 @@ exports.review = asyncHandler(async (req, res) => {
 
   if (decision === 'approved') {
     await Claim.updateMany(
-      { item: claim.item, _id: { $ne: claim._id }, status: 'pending' },
+      { item: claim.item, _id: { $ne: claim._id }, status: { $in: ['pending', 'approved'] } },
       { status: 'rejected', reviewedAt: new Date(), reviewedBy: req.user._id }
     );
-    await Item.findByIdAndUpdate(claim.item, { status: 'claimed' });
-  } else {
-    const stillApproved = await Claim.exists({ item: claim.item, status: 'approved' });
-    await Item.findByIdAndUpdate(claim.item, { status: stillApproved ? 'claimed' : 'active' });
   }
 
+  await syncItemStatus(claim.item);
   await claim.populate('claimant', 'name email studentId phone');
   await claim.populate('item', 'title status imageUrl');
   res.json({

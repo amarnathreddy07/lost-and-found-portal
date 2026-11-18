@@ -2,7 +2,7 @@ import { api } from '../api.js';
 import { getUser, isAdmin } from '../store.js';
 import { emit } from '../events.js';
 import {
-  $, escapeHtml, imageMarkup, typeBadge, statusBadge, formatDate,
+  $, escapeHtml, imageMarkup, typeBadge, statusBadge, formatCalendarDate, formatDate,
   openModal, closeModal, confirmAction, toast, showFieldErrors, clearFormErrors, setLoading
 } from '../ui.js';
 
@@ -58,7 +58,7 @@ function detailMarkup(item) {
     <p>${escapeHtml(item.description)}</p>
     <div class="detail-grid">
       <div><small>CAMPUS LOCATION</small><strong>${escapeHtml(item.location)}</strong></div>
-      <div><small>DATE REPORTED</small><strong>${formatDate(item.date)}</strong></div>
+      <div><small>DATE REPORTED</small><strong>${formatCalendarDate(item.date)}</strong></div>
       <div><small>REPORTED BY</small><strong>${escapeHtml(owner.name || 'Campus member')}</strong></div>
       <div><small>POSTED</small><strong>${formatDate(item.createdAt)}</strong></div>
     </div>
@@ -66,25 +66,64 @@ function detailMarkup(item) {
     ${manageBlock}`;
 }
 
-async function showClaims(itemId) {
+async function showClaims(itemId, canManage) {
   const modal = openModal({ title: 'CLAIMS FOR THIS LISTING', body: '<p class="mono-note">LOADING CLAIMS...</p>', wide: true });
+
   try {
     const response = await api.claims.forItem(itemId);
+    if (!modal.dialog.isConnected) return;
+
     if (!response.claims.length) {
       modal.body.innerHTML = '<div class="inline-notice">NO CLAIMS HAVE BEEN SUBMITTED YET.</div>';
       return;
     }
+
     modal.body.innerHTML = response.claims.map((claim) => `
-      <div class="list-card">
+      <div class="list-card" data-claim-row="${escapeHtml(claim._id)}">
         <div class="list-card-head">
           <strong>${escapeHtml(claim.claimant?.name || 'Student')}</strong>
           ${statusBadge(claim.status)}
         </div>
         <div class="list-card-body">${escapeHtml(claim.proof)}</div>
         <span class="mono-note">${formatDate(claim.createdAt)}</span>
+        ${canManage && claim.status === 'pending' ? `
+          <div class="row-actions" style="margin-top:8px">
+            <button class="btn btn-xs btn-accent" type="button" data-review="approved" data-id="${escapeHtml(claim._id)}">APPROVE</button>
+            <button class="btn btn-xs btn-danger" type="button" data-review="rejected" data-id="${escapeHtml(claim._id)}">REJECT</button>
+          </div>` : ''}
       </div>`).join('');
+
+    modal.body.addEventListener('click', async (event) => {
+      if (!(event.target instanceof Element)) return;
+      const button = event.target.closest('[data-review]');
+      if (!button) return;
+
+      const decision = button.dataset.review;
+      const confirmed = await confirmAction({
+        title: `${decision.toUpperCase()} CLAIM?`,
+        message: decision === 'approved'
+          ? 'This marks the item as claimed and rejects other pending claims.'
+          : 'The item will stay available for other students.',
+        confirmLabel: `YES, ${decision.toUpperCase()}`,
+        danger: decision !== 'approved'
+      });
+      if (!confirmed) return;
+
+      setLoading(button, true);
+      try {
+        const result = await api.claims.review(button.dataset.id, decision);
+        toast(result.message, 'success');
+        closeModal();
+        closeModal();
+        emit('refresh');
+        openItem(itemId);
+      } catch (error) {
+        toast(error.message, 'error');
+        setLoading(button, false);
+      }
+    });
   } catch (error) {
-    modal.body.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
+    if (modal.dialog.isConnected) modal.body.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -95,14 +134,19 @@ export async function openItem(id) {
     const response = await api.items.get(id);
     item = response.item;
   } catch (error) {
-    modal.body.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
+    if (modal.dialog.isConnected) modal.body.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
     return;
   }
 
-  $('.modal-head h2').textContent = item.title.toUpperCase();
+  if (!modal.dialog.isConnected) return;
+  modal.setTitle(item.title.toUpperCase());
   modal.body.innerHTML = detailMarkup(item);
 
+  const owner = item.reportedBy || {};
+  const canManage = getUser() && (owner._id === getUser().id || isAdmin());
+
   modal.body.addEventListener('click', async (event) => {
+    if (!(event.target instanceof Element)) return;
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) return;
     const action = actionButton.dataset.action;
@@ -120,7 +164,7 @@ export async function openItem(id) {
     }
 
     if (action === 'claims') {
-      showClaims(item._id);
+      showClaims(item._id, canManage);
       return;
     }
 
@@ -159,14 +203,17 @@ export async function openItem(id) {
 
   const claimForm = $('#claim-form', modal.body);
   if (claimForm) {
+    let submitting = false;
     claimForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (submitting) return;
       const proof = claimForm.elements.proof.value.trim();
       if (proof.length < 10) {
         showFieldErrors(claimForm, [{ field: 'proof', message: 'Tell the owner at least 10 characters of proof.' }]);
         return;
       }
       clearFormErrors(claimForm);
+      submitting = true;
       const submit = $('button[type="submit"]', claimForm);
       setLoading(submit, true);
       try {
@@ -178,6 +225,8 @@ export async function openItem(id) {
         if (error.details?.length) showFieldErrors(claimForm, error.details);
         else toast(error.message, 'error');
         setLoading(submit, false);
+      } finally {
+        submitting = false;
       }
     });
   }

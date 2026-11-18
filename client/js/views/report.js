@@ -1,15 +1,36 @@
 import { api } from '../api.js';
 import { state } from '../store.js';
 import { emit } from '../events.js';
-import { CATEGORIES, LOCATIONS } from '../constants.js';
+import { CATEGORIES, LOCATIONS, LOCATION_GROUPS } from '../constants.js';
 import {
-  $, clearFormErrors, showFieldErrors, toast, setLoading, safeImage, imageMarkup
+  $, clearFormErrors, showFieldErrors, toast, setLoading, safeImage, imageMarkup,
+  populateLocationSelect, syncLocationSelect
 } from '../ui.js';
 
 let previewUrl = '';
+let submitting = false;
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function localDateInput(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateInputValue(value) {
+  if (!value) return localDateInput();
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? localDateInput() : localDateInput(date);
+}
+
+function isValidDateInput(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return false;
+  return date.getTime() <= new Date().getTime();
 }
 
 function validate(form) {
@@ -29,12 +50,12 @@ function validate(form) {
   if (!CATEGORIES.includes(values.category)) errors.push({ field: 'category', message: 'Choose a category.' });
   if (values.description.length < 10) errors.push({ field: 'description', message: 'Add at least 10 characters of detail.' });
   if (!LOCATIONS.includes(values.location)) errors.push({ field: 'location', message: 'Choose a campus location.' });
-  if (!values.date || Number.isNaN(new Date(values.date).getTime())) errors.push({ field: 'date', message: 'Choose a valid date.' });
+  if (!isValidDateInput(values.date)) errors.push({ field: 'date', message: 'Choose a valid date that is not in the future.' });
   if (values.imageUrl && !safeImage(values.imageUrl)) errors.push({ field: 'imageUrl', message: 'Enter an http(s) image URL.' });
 
   const file = form.elements.image.files?.[0];
   if (file && !/^image\/(png|jpe?g|gif|webp|avif)$/i.test(file.type)) {
-    toast('Only image files are accepted.', 'error');
+    toast('Only PNG/JPEG/GIF/WEBP/AVIF images are accepted.', 'error');
     return null;
   }
   if (file && file.size > 5 * 1024 * 1024) {
@@ -53,13 +74,14 @@ function updatePreview(form) {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = '';
 
-  const existing = state.editingItem?.imageUrl ? safeImage(state.editingItem.imageUrl) : '';
-  const source = file ? URL.createObjectURL(file) : (form.elements.imageUrl.value.trim() && safeImage(form.elements.imageUrl.value));
+  const typedUrl = form.elements.imageUrl.value.trim();
+  const fallback = state.editingItem?.imageUrl || '';
+  const source = file ? URL.createObjectURL(file) : safeImage(typedUrl || fallback);
 
   if (file) previewUrl = source;
 
-  if (source || existing) {
-    img.src = source || existing;
+  if (source) {
+    img.src = source;
     wrap.hidden = false;
   } else {
     img.removeAttribute('src');
@@ -70,9 +92,12 @@ function updatePreview(form) {
 function resetForm() {
   const form = $('#report-form');
   form.reset();
-  form.elements.date.value = today();
+  syncLocationSelect(form.elements.location, '');
+  form.elements.date.value = localDateInput();
   state.editingItem = null;
   clearFormErrors(form);
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = '';
   $('#image-preview-wrap').hidden = true;
   $('#image-preview').removeAttribute('src');
 }
@@ -82,9 +107,9 @@ export function initReport() {
 
   $('#r-category').innerHTML = '<option value="">SELECT CATEGORY</option>' +
     CATEGORIES.map((value) => `<option value="${value}">${value.toUpperCase()}</option>`).join('');
-  $('#r-location').innerHTML = '<option value="">SELECT LOCATION</option>' +
-    LOCATIONS.map((value) => `<option value="${value}">${value.toUpperCase()}</option>`).join('');
-  form.elements.date.value = today();
+  populateLocationSelect($('#r-location'), LOCATION_GROUPS, 'SELECT LOCATION');
+  form.elements.date.value = localDateInput();
+  form.elements.date.max = localDateInput();
 
   form.elements.image.addEventListener('change', () => updatePreview(form));
   form.elements.imageUrl.addEventListener('input', () => updatePreview(form));
@@ -92,6 +117,7 @@ export function initReport() {
   $('#clear-image').addEventListener('click', () => {
     form.elements.image.value = '';
     form.elements.imageUrl.value = '';
+    if (state.editingItem) state.editingItem = { ...state.editingItem, imageUrl: '' };
     updatePreview(form);
   });
 
@@ -102,6 +128,7 @@ export function initReport() {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (submitting) return;
     const errors = validate(form);
     if (errors === null) return;
     if (errors.length) {
@@ -116,6 +143,7 @@ export function initReport() {
     if (!file || !file.name) payload.delete('image');
     if (file && file.name) payload.delete('imageUrl');
 
+    submitting = true;
     const submit = $('#report-submit');
     setLoading(submit, true);
     try {
@@ -126,11 +154,11 @@ export function initReport() {
       toast(response.message, 'success');
       resetForm();
       emit('navigate', { view: 'home' });
-      emit('refresh');
     } catch (error) {
       if (error.details?.length) showFieldErrors(form, error.details);
       toast(error.message, 'error');
     } finally {
+      submitting = false;
       setLoading(submit, false);
     }
   });
@@ -146,17 +174,14 @@ export function openReportForm(item = null) {
     form.elements.type.value = item.type || '';
     form.elements.category.value = item.category || '';
     form.elements.description.value = item.description || '';
-    form.elements.location.value = item.location || '';
-    form.elements.date.value = item.date ? new Date(item.date).toISOString().slice(0, 10) : today();
-    form.elements.imageUrl.value = item.imageUrl && item.imageUrl.startsWith('http') ? item.imageUrl : '';
+    syncLocationSelect(form.elements.location, item.location || '');
+    form.elements.date.value = dateInputValue(item.date);
+    form.elements.imageUrl.value = safeImage(item.imageUrl || '');
     form.elements.image.value = '';
     $('#report-title').textContent = 'EDIT LISTING';
     $('#report-subtitle').textContent = 'Update the details below, then save your changes.';
     $('#report-submit').textContent = 'SAVE CHANGES';
-    if (item.imageUrl) {
-      $('#image-preview').src = safeImage(item.imageUrl) || '';
-      $('#image-preview-wrap').hidden = !safeImage(item.imageUrl);
-    }
+    updatePreview(form);
   } else {
     resetForm();
     $('#report-title').textContent = 'POST AN ITEM';

@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="header-top shell">
       <a class="brand" href="#home" data-nav="home" aria-label="Sai University Lost and Found home">
-        <span class="brand-mark">SAI</span>
+        <img class="brand-logo" src="/assets/saiu-logo-bw.png" alt="" aria-hidden="true" />
         <span class="brand-copy">
           <strong>LOST &amp; FOUND</strong>
           <small>CAMPUS PORTAL // EST. 2026</small>
@@ -41,7 +41,7 @@
       </div>
     </div>
 
-    <div class="toolbar">
+    <div class="toolbar" aria-label="Campus board filters">
       <div class="shell toolbar-inner">
         <label class="field search-field">
           <span class="sr-only">Search items</span>
@@ -62,10 +62,10 @@
         <label class="field">
           <span class="sr-only">Sort results</span>
           <select id="filter-sort">
-            <option value="newest">NEWEST FIRST</option>
-            <option value="oldest">OLDEST FIRST</option>
-            <option value="date_desc">DATE: NEWEST</option>
-            <option value="date_asc">DATE: OLDEST</option>
+            <option value="newest">POSTED: NEWEST</option>
+            <option value="oldest">POSTED: OLDEST</option>
+            <option value="date_desc">ITEM DATE: NEWEST</option>
+            <option value="date_asc">ITEM DATE: OLDEST</option>
             <option value="title_asc">TITLE: A-Z</option>
           </select>
         </label>
@@ -186,11 +186,11 @@
         </div>
       </div>
       <div class="tabs" role="tablist" aria-label="Dashboard sections">
-        <button class="tab active" type="button" data-dtab="items" role="tab">MY LISTINGS</button>
-        <button class="tab" type="button" data-dtab="submitted" role="tab">CLAIMS I SENT</button>
-        <button class="tab" type="button" data-dtab="received" role="tab">CLAIMS ON MY ITEMS</button>
+        <button id="dashboard-tab-items" class="tab active" type="button" data-dtab="items" role="tab" aria-controls="dashboard-panel" aria-selected="true">MY LISTINGS</button>
+        <button id="dashboard-tab-submitted" class="tab" type="button" data-dtab="submitted" role="tab" aria-controls="dashboard-panel" aria-selected="false">CLAIMS I SENT</button>
+        <button id="dashboard-tab-received" class="tab" type="button" data-dtab="received" role="tab" aria-controls="dashboard-panel" aria-selected="false">CLAIMS ON MY ITEMS</button>
       </div>
-      <div id="dashboard-panel" class="panel" aria-live="polite"></div>
+      <div id="dashboard-panel" class="panel" role="tabpanel" aria-labelledby="dashboard-tab-items" aria-live="polite"></div>
     </section>
 
     <section id="view-admin" class="view hidden" aria-labelledby="admin-title">
@@ -200,21 +200,38 @@
           <h1 id="admin-title">MODERATION DESK</h1>
           <p>Overview, listings, claims and user roles — all in one hard-bordered place.</p>
         </div>
-        <button class="btn btn-outline" type="button" id="admin-refresh">REFRESH DATA</button>
+        <div class="page-actions">
+          <button class="btn btn-outline" type="button" id="admin-refresh">REFRESH DATA</button>
+          <button class="btn btn-accent" type="button" id="admin-create-user">CREATE USER</button>
+          <button class="btn btn-outline" type="button" id="admin-import-users">IMPORT CSV</button>
+        </div>
       </div>
       <div id="admin-stats" class="stats-grid" aria-live="polite"></div>
       <div class="tabs" role="tablist" aria-label="Admin sections">
-        <button class="tab active" type="button" data-atab="items" role="tab">LISTINGS</button>
-        <button class="tab" type="button" data-atab="claims" role="tab">CLAIMS</button>
-        <button class="tab" type="button" data-atab="users" role="tab">USERS</button>
+        <button id="admin-tab-items" class="tab active" type="button" data-atab="items" role="tab" aria-controls="admin-panel" aria-selected="true">LISTINGS</button>
+        <button id="admin-tab-claims" class="tab" type="button" data-atab="claims" role="tab" aria-controls="admin-panel" aria-selected="false">CLAIMS</button>
+        <button id="admin-tab-users" class="tab" type="button" data-atab="users" role="tab" aria-controls="admin-panel" aria-selected="false">USERS</button>
       </div>
-      <div id="admin-panel" class="panel" aria-live="polite"></div>
+      <div id="admin-user-filters" class="filter-bar" hidden>
+        <label for="admin-grad-year">GRAD YEAR</label>
+        <select id="admin-grad-year" aria-label="Filter users by graduation year">
+          <option value="">ALL GRAD YEARS</option>
+        </select>
+        <label for="admin-department">DEPARTMENT</label>
+        <select id="admin-department" aria-label="Filter users by department" disabled>
+          <option value="">ALL DEPARTMENTS</option>
+        </select>
+      </div>
+      <div id="admin-panel" class="panel" role="tabpanel" aria-labelledby="admin-tab-items" aria-live="polite"></div>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="shell footer-inner">
-      <strong>SAI UNIVERSITY // LOST &amp; FOUND</strong>
+      <div class="footer-brand">
+        <img src="/assets/saiu-logo-bw.png" alt="Sai University" />
+        <strong>SAI UNIVERSITY // LOST &amp; FOUND</strong>
+      </div>
       <span>BUILT FOR STUDENTS. RUN BY STUDENTS.</span>
     </div>
   </footer>

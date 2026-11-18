@@ -1,20 +1,9 @@
-const TOKEN_KEY = 'sai_lf_token';
-
-let token = localStorage.getItem(TOKEN_KEY);
-
-export function setToken(value) {
-  token = value || '';
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
-export function getToken() {
-  return token;
-}
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/me', '/auth/change-password'];
 
 export function withParams(path, params = {}) {
+  if (typeof path === 'string' && path.startsWith('?')) return path;
   const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
+  Object.entries(params || {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && String(value).trim() !== '') {
       search.append(key, String(value));
     }
@@ -25,9 +14,11 @@ export function withParams(path, params = {}) {
 
 export async function request(path, options = {}) {
   const { method = 'GET', body, headers = {} } = options;
-  const requestOptions = { method, headers: { ...headers } };
-
-  if (token) requestOptions.headers.Authorization = `Bearer ${token}`;
+  const requestOptions = {
+    method,
+    headers: { ...headers },
+    credentials: 'include'
+  };
 
   if (body !== undefined) {
     if (typeof FormData !== 'undefined' && body instanceof FormData) {
@@ -47,16 +38,24 @@ export async function request(path, options = {}) {
     throw networkError;
   }
 
-  let data = {};
+  let data;
   try {
     data = await response.json();
   } catch (_error) {
+    if (response.ok) throw new Error('Unexpected server response. Please try again.');
     data = {};
   }
 
   if (!response.ok) {
+    if (response.status === 401 && !AUTH_PATHS.some((authPath) => path.startsWith(authPath))) {
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+    }
+    if (data.code === 'PASSWORD_CHANGE_REQUIRED' || data.details?.some((detail) => detail.code === 'PASSWORD_CHANGE_REQUIRED')) {
+      window.dispatchEvent(new CustomEvent('password:required'));
+    }
     const error = new Error(data.message || `Request failed (${response.status}).`);
     error.status = response.status;
+    error.code = data.code;
     error.details = data.details || [];
     throw error;
   }
@@ -69,30 +68,42 @@ export const api = {
     register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
     login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
     me: () => request('/auth/me'),
+    changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
     logout: () => request('/auth/logout', { method: 'POST' })
   },
   items: {
     list: (params) => request(withParams('/items', params)),
-    get: (id) => request(`/items/${id}`),
+    get: (id) => request(`/items/${encodeURIComponent(id)}`),
     mine: () => request('/items/mine'),
     create: (formData) => request('/items', { method: 'POST', body: formData }),
-    update: (id, formData) => request(`/items/${id}`, { method: 'PUT', body: formData }),
-    remove: (id) => request(`/items/${id}`, { method: 'DELETE' }),
-    setStatus: (id, status) => request(`/items/${id}/status`, { method: 'PATCH', body: { status } })
+    update: (id, formData) => request(`/items/${encodeURIComponent(id)}`, { method: 'PUT', body: formData }),
+    remove: (id) => request(`/items/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    setStatus: (id, status) => request(`/items/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: { status } })
   },
   claims: {
     create: (payload) => request('/claims', { method: 'POST', body: payload }),
     mine: () => request('/claims/mine'),
     received: () => request('/claims/received'),
-    forItem: (itemId) => request(`/claims/item/${itemId}`),
-    review: (id, decision) => request(`/claims/${id}/review`, { method: 'PATCH', body: { decision } }),
+    forItem: (itemId) => request(`/claims/item/${encodeURIComponent(itemId)}`),
+    review: (id, decision) => request(`/claims/${encodeURIComponent(id)}/review`, { method: 'PATCH', body: { decision } }),
     all: () => request('/claims')
   },
   admin: {
     stats: () => request('/admin/stats'),
     items: () => request('/admin/items'),
     users: () => request('/admin/users'),
-    setRole: (id, role) => request(`/admin/users/${id}/role`, { method: 'PATCH', body: { role } }),
-    removeUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' })
+    preloadedUsers: () => request('/admin/users/preloaded'),
+    createUser: (email) => request('/admin/users', { method: 'POST', body: { email } }),
+    importUsers: (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request('/admin/users/import', { method: 'POST', body: formData });
+    },
+    resetPassword: (id, password) => request(`/admin/users/${encodeURIComponent(id)}/reset-password`, {
+      method: 'POST',
+      body: password ? { password } : {}
+    }),
+    setRole: (id, role) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'PATCH', body: { role } }),
+    removeUser: (id) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
   }
 };

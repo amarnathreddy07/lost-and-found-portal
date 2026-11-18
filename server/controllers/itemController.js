@@ -22,6 +22,12 @@ function imageUrlFor(req) {
   return '';
 }
 
+async function deleteUploadedFile(url) {
+  if (url && url.startsWith('/uploads/')) {
+    await fs.promises.unlink(path.join(uploadDir, path.basename(url))).catch(() => {});
+  }
+}
+
 exports.list = asyncHandler(async (req, res) => {
   const { q, type, category, location, status, sort = 'newest' } = req.query;
   const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
@@ -43,7 +49,7 @@ exports.list = asyncHandler(async (req, res) => {
       .sort(sortOptions[sort] || sortOptions.newest)
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate('reportedBy', 'name studentId')
+      .populate('reportedBy', 'name')
       .lean(),
     Item.countDocuments(filter)
   ]);
@@ -61,7 +67,7 @@ exports.mine = asyncHandler(async (req, res) => {
 });
 
 exports.getById = asyncHandler(async (req, res) => {
-  const item = await Item.findById(req.params.id).populate('reportedBy', 'name studentId').lean();
+  const item = await Item.findById(req.params.id).populate('reportedBy', 'name').lean();
   if (!item) throw new ApiError(404, 'Item not found.');
   res.json({ success: true, item });
 });
@@ -92,11 +98,18 @@ exports.update = asyncHandler(async (req, res) => {
   for (const field of fields) {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   }
-  if (req.file) updates.imageUrl = `/uploads/${req.file.filename}`;
+  const existing = await Item.findById(req.params.id);
+  if (!existing) throw new ApiError(404, 'Item not found.');
+
+  if (req.file) {
+    if (existing.imageUrl && existing.imageUrl !== `/uploads/${req.file.filename}`) {
+      await deleteUploadedFile(existing.imageUrl);
+    }
+    updates.imageUrl = `/uploads/${req.file.filename}`;
+  }
   if (updates.date) updates.date = new Date(updates.date);
 
   const item = await Item.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
-  if (!item) throw new ApiError(404, 'Item not found.');
   res.json({ success: true, message: 'Listing updated.', item });
 });
 
@@ -105,15 +118,17 @@ exports.remove = asyncHandler(async (req, res) => {
   if (!item) throw new ApiError(404, 'Item not found.');
 
   await Claim.deleteMany({ item: item._id });
-  if (item.imageUrl && item.imageUrl.startsWith('/uploads/')) {
-    const filename = path.basename(item.imageUrl);
-    await fs.promises.unlink(path.join(uploadDir, filename)).catch(() => {});
-  }
+  await deleteUploadedFile(item.imageUrl);
 
   res.json({ success: true, message: 'Listing and its claims were deleted.' });
 });
 
 exports.setStatus = asyncHandler(async (req, res) => {
+  if (req.body.status === 'active') {
+    const approved = await Claim.exists({ item: req.params.id, status: 'approved' });
+    if (approved) throw new ApiError(409, 'An approved claim exists. Resolve the item before reopening it.');
+  }
+
   const item = await Item.findByIdAndUpdate(
     req.params.id,
     { status: req.body.status },

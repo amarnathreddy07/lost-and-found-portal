@@ -2,8 +2,8 @@ import { api } from '../api.js';
 import { getUser, state } from '../store.js';
 import { emit } from '../events.js';
 import {
-  $, $$, escapeHtml, statusBadge, typeBadge, formatDate, truncate,
-  confirmAction, toast, setLoading, openModal
+  $, $$, escapeHtml, statusBadge, typeBadge, formatCalendarDate, formatDate, truncate,
+  confirmAction, toast, setLoading
 } from '../ui.js';
 
 function empty(message) {
@@ -11,6 +11,7 @@ function empty(message) {
 }
 
 function listingCard(item) {
+  const id = escapeHtml(item._id);
   return `
     <div class="list-card">
       <div class="list-card-head">
@@ -18,15 +19,15 @@ function listingCard(item) {
         <div>${typeBadge(item.type)} ${statusBadge(item.status)}</div>
       </div>
       <div class="list-card-body">
-        ${escapeHtml(item.location)} &middot; ${formatDate(item.date)} &middot; ${escapeHtml(item.category)}
+        ${escapeHtml(item.location)} &middot; ${formatCalendarDate(item.date)} &middot; ${escapeHtml(item.category)}
         <br />${escapeHtml(truncate(item.description, 140))}
       </div>
       <div class="row-actions">
-        <button class="btn btn-xs" type="button" data-daction="edit" data-id="${item._id}">EDIT</button>
-        <button class="btn btn-xs" type="button" data-daction="status" data-id="${item._id}" data-status="active">REOPEN</button>
-        <button class="btn btn-xs" type="button" data-daction="status" data-id="${item._id}" data-status="claimed">CLAIMED</button>
-        <button class="btn btn-xs" type="button" data-daction="status" data-id="${item._id}" data-status="resolved">RESOLVED</button>
-        <button class="btn btn-xs btn-danger" type="button" data-daction="delete" data-id="${item._id}">DELETE</button>
+        <button class="btn btn-xs" type="button" data-daction="edit" data-id="${id}">EDIT</button>
+        <button class="btn btn-xs" type="button" data-daction="status" data-id="${id}" data-status="active">REOPEN</button>
+        <button class="btn btn-xs" type="button" data-daction="status" data-id="${id}" data-status="claimed">CLAIMED</button>
+        <button class="btn btn-xs" type="button" data-daction="status" data-id="${id}" data-status="resolved">RESOLVED</button>
+        <button class="btn btn-xs btn-danger" type="button" data-daction="delete" data-id="${id}">DELETE</button>
       </div>
     </div>`;
 }
@@ -47,6 +48,7 @@ function submittedCard(claim) {
 
 function receivedCard(claim) {
   const claimant = claim.claimant || {};
+  const id = escapeHtml(claim._id);
   const canReview = claim.status === 'pending';
   return `
     <div class="list-card">
@@ -63,8 +65,8 @@ function receivedCard(claim) {
       </div>
       ${canReview ? `
         <div class="row-actions">
-          <button class="btn btn-xs btn-accent" type="button" data-daction="review" data-id="${claim._id}" data-decision="approved">APPROVE</button>
-          <button class="btn btn-xs btn-danger" type="button" data-daction="review" data-id="${claim._id}" data-decision="rejected">REJECT</button>
+          <button class="btn btn-xs btn-accent" type="button" data-daction="review" data-id="${id}" data-decision="approved">APPROVE</button>
+          <button class="btn btn-xs btn-danger" type="button" data-daction="review" data-id="${id}" data-decision="rejected">REJECT</button>
         </div>` : ''}
     </div>`;
 }
@@ -73,12 +75,18 @@ export function initDashboard() {
   $$('[data-dtab]').forEach((tab) => {
     tab.addEventListener('click', () => {
       state.dashboardTab = tab.dataset.dtab;
-      $$('[data-dtab]').forEach((node) => node.classList.toggle('active', node === tab));
+      $$('[data-dtab]').forEach((node) => {
+        const active = node === tab;
+        node.classList.toggle('active', active);
+        node.setAttribute('aria-selected', String(active));
+      });
+      $('#dashboard-panel').setAttribute('aria-labelledby', tab.id);
       renderDashboard();
     });
   });
 
   $('#dashboard-panel').addEventListener('click', async (event) => {
+    if (!(event.target instanceof Element)) return;
     const button = event.target.closest('[data-daction]');
     if (!button) return;
     const { daction, id, status, decision } = button.dataset;
@@ -104,7 +112,6 @@ export function initDashboard() {
         const response = await api.items.remove(id);
         toast(response.message, 'success');
         renderDashboard();
-        emit('refresh');
       } catch (error) {
         toast(error.message, 'error');
       }
@@ -117,7 +124,6 @@ export function initDashboard() {
         const response = await api.items.setStatus(id, status);
         toast(response.message, 'success');
         renderDashboard();
-        emit('refresh');
       } catch (error) {
         toast(error.message, 'error');
         setLoading(button, false);
@@ -129,14 +135,18 @@ export function initDashboard() {
       const note = decision === 'approved'
         ? 'Approving this claim will mark the item as claimed and reject other pending claims.'
         : 'Rejecting this claim will keep the item available for other students.';
-      const confirmed = await confirmAction({ title: `${decision.toUpperCase()} CLAIM?`, message: note, confirmLabel: `YES, ${decision.toUpperCase()}`, danger: decision !== 'approved' });
+      const confirmed = await confirmAction({
+        title: `${decision.toUpperCase()} CLAIM?`,
+        message: note,
+        confirmLabel: `YES, ${decision.toUpperCase()}`,
+        danger: decision !== 'approved'
+      });
       if (!confirmed) return;
       setLoading(button, true);
       try {
         const response = await api.claims.review(id, decision);
         toast(response.message, 'success');
         renderDashboard();
-        emit('refresh');
       } catch (error) {
         toast(error.message, 'error');
         setLoading(button, false);
@@ -146,7 +156,9 @@ export function initDashboard() {
 }
 
 export async function renderDashboard() {
+  const seq = ++state.dashboardSeq;
   const panel = $('#dashboard-panel');
+
   if (!getUser()) {
     panel.innerHTML = `${empty('SIGN IN TO MANAGE YOUR LISTINGS AND CLAIMS.')}
       <button class="btn btn-accent" type="button" data-dlogin>SIGN IN NOW</button>`;
@@ -156,29 +168,25 @@ export async function renderDashboard() {
 
   panel.innerHTML = '<p class="mono-note">LOADING YOUR DATA...</p>';
   try {
+    let response;
+    if (state.dashboardTab === 'items') response = await api.items.mine();
+    else if (state.dashboardTab === 'submitted') response = await api.claims.mine();
+    else response = await api.claims.received();
+    if (seq !== state.dashboardSeq) return;
+
     if (state.dashboardTab === 'items') {
-      const response = await api.items.mine();
-      panel.innerHTML = response.items.length
-        ? response.items.map(listingCard).join('')
-        : empty('YOU HAVE NOT REPORTED ANY ITEMS YET. USE THE REPORT FORM TO START.');
+      const items = Array.isArray(response.items) ? response.items : [];
+      panel.innerHTML = items.length ? items.map(listingCard).join('') : empty('YOU HAVE NOT REPORTED ANY ITEMS YET. USE THE REPORT FORM TO START.');
     } else if (state.dashboardTab === 'submitted') {
-      const response = await api.claims.mine();
-      panel.innerHTML = response.claims.length
-        ? response.claims.map(submittedCard).join('')
-        : empty('YOU HAVE NOT SUBMITTED ANY CLAIMS YET.');
+      const claims = Array.isArray(response.claims) ? response.claims : [];
+      panel.innerHTML = claims.length ? claims.map(submittedCard).join('') : empty('YOU HAVE NOT SUBMITTED ANY CLAIMS YET.');
     } else {
-      const response = await api.claims.received();
-      panel.innerHTML = response.claims.length
-        ? response.claims.map(receivedCard).join('')
-        : empty('NO ONE HAS CLAIMED YOUR LISTINGS YET.');
+      const claims = Array.isArray(response.claims) ? response.claims : [];
+      panel.innerHTML = claims.length ? claims.map(receivedCard).join('') : empty('NO ONE HAS CLAIMED YOUR LISTINGS YET.');
     }
   } catch (error) {
+    if (seq !== state.dashboardSeq) return;
     panel.innerHTML = `<div class="inline-notice">${escapeHtml(error.message)}</div>`;
     toast(error.message, 'error');
   }
-}
-
-export function showClaimProof(proof) {
-  const modal = openModal({ title: 'CLAIM PROOF', body: `<p>${escapeHtml(proof)}</p>` });
-  return modal;
 }
