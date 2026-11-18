@@ -1,9 +1,11 @@
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 
-const uploadDir = path.join(__dirname, '..', 'uploads');
+const isServerless = Boolean(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+const uploadDir = isServerless ? path.join(os.tmpdir(), 'sai-university-uploads') : path.join(__dirname, '..', 'uploads');
 const maxMb = Number(process.env.UPLOAD_MAX_MB || 5);
 
 const allowedExtensions = {
