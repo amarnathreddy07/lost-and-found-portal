@@ -24,10 +24,20 @@ const rootDir = path.join(__dirname, '..');
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
-const allowedOrigins = String(process.env.CLIENT_URL || '')
+function toOrigin(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  try {
+    return new URL(trimmed).origin;
+  } catch (_error) {
+    return trimmed;
+  }
+}
+
+const allowedOrigins = [...new Set(String(process.env.CLIENT_URL || '')
   .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+  .map(toOrigin)
+  .filter(Boolean))];
 
 const corsOrigin = allowedOrigins.length
   ? allowedOrigins
