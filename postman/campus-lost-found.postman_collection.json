@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "SAI Campus Lost & Found Portal API",
+    "description": "20 request test suite covering health, auth, validation, unauthorized access, item CRUD, claims and admin moderation. Run folders in order. Seeded admin: admin@saiuniversity.edu / Admin@12345; seeded student: meera@saiuniversity.edu / Student@123.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{userToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "userToken", "value": "" },
+    { "key": "claimantToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "itemId", "value": "" },
+    { "key": "claimId", "value": "" },
+    { "key": "studentEmail", "value": "postman.student@saiuniversity.edu" }
+  ],
+  "item": [
+    {
+      "name": "00 - Health & Auth",
+      "item": [
+        {
+          "name": "Health check",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/health", "auth": { "type": "noauth" } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('API is up', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().success).to.be.true;", "});"] } }]
+        },
+        {
+          "name": "Register student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Student\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Student@123\",\n  \"studentId\": \"SAI-PM-001\",\n  \"phone\": \"+91 90000 11111\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/register",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Registered (201) with token', function () {", "  pm.expect(pm.response.code).to.be.oneOf([201, 409]);", "  if (pm.response.code === 201) {", "    var data = pm.response.json();", "    pm.collectionVariables.set('userToken', data.token);", "    pm.expect(data.user.role).to.eql('user');", "  }", "});"] } }]
+        },
+        {
+          "name": "Login student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Student@123\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Student login returns JWT', function () {", "  pm.response.to.have.status(200);", "  pm.collectionVariables.set('userToken', pm.response.json().token);", "});"] } }]
+        },
+        {
+          "name": "Login seeded claimant",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"meera@saiuniversity.edu\",\n  \"password\": \"Student@123\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Claimant login returns JWT', function () {", "  pm.response.to.have.status(200);", "  pm.collectionVariables.set('claimantToken', pm.response.json().token);", "});"] } }]
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@saiuniversity.edu\",\n  \"password\": \"Admin@12345\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Admin login returns JWT', function () {", "  pm.response.to.have.status(200);", "  var data = pm.response.json();", "  pm.expect(data.user.role).to.eql('admin');", "  pm.collectionVariables.set('adminToken', data.token);", "});"] } }]
+        },
+        {
+          "name": "Invalid login - wrong password (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@saiuniversity.edu\",\n  \"password\": \"wrong-password\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rejects bad credentials', function () {", "  pm.response.to.have.status(401);", "  pm.expect(pm.response.json().success).to.be.false;", "});"] } }]
+        },
+        {
+          "name": "Get current user (protected)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/auth/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Returns signed-in profile', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('studentEmail'));", "});"] } }]
+        }
+      ]
+    },
+    {
+      "name": "01 - Items & Validation",
+      "item": [
+        {
+          "name": "Unauthorized create item (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"No token item\",\n  \"type\": \"lost\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/items",
+            "auth": { "type": "noauth" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Blocks anonymous writes', function () {", "  pm.response.to.have.status(401);", "});"] } }]
+        },
+        {
+          "name": "Invalid item - missing required fields (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"AB\",\n  \"type\": \"missing\",\n  \"description\": \"too short\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/items"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Returns inline validation details', function () {", "  pm.response.to.have.status(400);", "  var data = pm.response.json();", "  pm.expect(data.details).to.be.an('array');", "  pm.expect(data.details.length).to.be.above(2);", "});"] } }]
+        },
+        {
+          "name": "Create item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman Test Calculator\",\n  \"type\": \"lost\",\n  \"category\": \"Electronics\",\n  \"description\": \"A white scientific calculator with a cracked corner, left near the library desk.\",\n  \"location\": \"Main Library\",\n  \"date\": \"2026-11-10\",\n  \"imageUrl\": \"https://example.com/calculator.jpg\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/items"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Item created', function () {", "  pm.response.to.have.status(201);", "  var data = pm.response.json();", "  pm.collectionVariables.set('itemId', data.item._id);", "  pm.expect(data.item.status).to.eql('active');", "});"] } }]
+        },
+        {
+          "name": "List items with search + filters",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/items?q=calculator&type=lost&category=Electronics&sort=date_desc&limit=12" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Filtered board returns results', function () {", "  pm.response.to.have.status(200);", "  var data = pm.response.json();", "  pm.expect(data.items).to.be.an('array');", "  pm.expect(data.pagination).to.have.property('total');", "});"] } }]
+        },
+        {
+          "name": "Get item by id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/items/{{itemId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Item fetched', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().item.title).to.include('Calculator');", "});"] } }]
+        },
+        {
+          "name": "Update item",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman Test Calculator (Updated)\",\n  \"description\": \"Updated description with a blue sticker on the back and my initials inside the cover.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/items/{{itemId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Item updated', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().item.title).to.include('Updated');", "});"] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Claims Workflow",
+      "item": [
+        {
+          "name": "Submit claim as another student",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{claimantToken}}", "type": "string" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"proof\": \"The cracked corner and blue sticker match the calculator I lost in the library.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/claims"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Claim submitted', function () {", "  pm.response.to.have.status(201);", "  var claim = pm.response.json().claim;", "  pm.collectionVariables.set('claimId', claim._id);", "  pm.expect(claim.status).to.eql('pending');", "});"] } }]
+        },
+        {
+          "name": "Duplicate claim rejected (409)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{claimantToken}}", "type": "string" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"proof\": \"This is a second attempt to claim the same calculator.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/claims"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Duplicate claim blocked', function () {", "  pm.response.to.have.status(409);", "});"] } }]
+        },
+        {
+          "name": "Owner cannot claim own item (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"itemId\": \"{{itemId}}\",\n  \"proof\": \"I am the reporter trying to claim my own listing by mistake.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/claims"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Self-claim blocked', function () {", "  pm.response.to.have.status(400);", "});"] } }]
+        },
+        {
+          "name": "Unauthorized claim review (403)",
+          "request": {
+            "method": "PATCH",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{claimantToken}}", "type": "string" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"decision\": \"approved\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/claims/{{claimId}}/review"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Claimant cannot review', function () {", "  pm.response.to.have.status(403);", "});"] } }]
+        },
+        {
+          "name": "Owner approves claim",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"decision\": \"approved\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/claims/{{claimId}}/review"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Claim approved and item claimed', function () {", "  pm.response.to.have.status(200);", "  var claim = pm.response.json().claim;", "  pm.expect(claim.status).to.eql('approved');", "  pm.expect(claim.item.status).to.eql('claimed');", "});"] } }]
+        },
+        {
+          "name": "Submitted claims list",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/claims/mine" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Submitted claims available', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().claims).to.be.an('array');", "});"] } }]
+        },
+        {
+          "name": "Mark item resolved",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"resolved\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/items/{{itemId}}/status"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Item resolved', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().item.status).to.eql('resolved');", "});"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Admin Moderation",
+      "item": [
+        {
+          "name": "Unauthorized admin stats (403)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/stats" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Student cannot view admin stats', function () {", "  pm.response.to.have.status(403);", "});"] } }]
+        },
+        {
+          "name": "Admin stats overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/admin/stats"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Admin stats returned', function () {", "  pm.response.to.have.status(200);", "  var stats = pm.response.json().stats;", "  pm.expect(stats).to.have.property('totalItems');", "  pm.expect(stats).to.have.property('resolvedRate');", "});"] } }]
+        },
+        {
+          "name": "Admin users list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/admin/users"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Users listed', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().users).to.be.an('array');", "});"] } }]
+        },
+        {
+          "name": "Invalid role value (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"superuser\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/admin/users/000000000000000000000000/role"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Invalid role rejected', function () {", "  pm.response.to.have.status(400);", "});"] } }]
+        },
+        {
+          "name": "Admin can delete any listing",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/items/{{itemId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Listing deleted', function () {", "  pm.response.to.have.status(200);", "});"] } }]
+        },
+        {
+          "name": "Deleted item returns 404",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/items/{{itemId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Item no longer exists', function () {", "  pm.response.to.have.status(404);", "});"] } }]
+        }
+      ]
+    }
+  ]
+}

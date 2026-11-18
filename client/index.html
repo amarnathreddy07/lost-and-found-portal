@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#F4F3EE" />
+  <meta name="description" content="Campus Lost and Found Portal for Sai University — report, search and claim campus items." />
+  <title>SAI LOST &amp; FOUND — Campus Portal</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="site-header">
+    <div class="header-top shell">
+      <a class="brand" href="#home" data-nav="home" aria-label="Sai University Lost and Found home">
+        <span class="brand-mark">SAI</span>
+        <span class="brand-copy">
+          <strong>LOST &amp; FOUND</strong>
+          <small>CAMPUS PORTAL // EST. 2026</small>
+        </span>
+      </a>
+
+      <nav class="main-nav" aria-label="Primary navigation">
+        <button class="nav-btn" type="button" data-nav="home">BOARD</button>
+        <button class="nav-btn" type="button" data-nav="report">REPORT</button>
+        <button class="nav-btn" type="button" data-nav="dashboard">MY SPACE</button>
+        <button class="nav-btn admin-only" type="button" data-nav="admin">ADMIN</button>
+      </nav>
+
+      <div class="header-account">
+        <div id="user-chip" class="user-chip" hidden>
+          <span id="user-initials" class="avatar">SU</span>
+          <span class="user-meta">
+            <strong id="user-name">Student</strong>
+            <small id="user-role">USER</small>
+          </span>
+        </div>
+        <button id="auth-open" class="btn btn-dark btn-sm" type="button">SIGN IN</button>
+        <button id="logout-btn" class="btn btn-outline btn-sm" type="button" hidden>LOG OUT</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="shell toolbar-inner">
+        <label class="field search-field">
+          <span class="sr-only">Search items</span>
+          <input id="filter-q" type="search" placeholder="SEARCH ITEMS, PLACES, KEYWORDS..." autocomplete="off" />
+        </label>
+        <label class="field">
+          <span class="sr-only">Filter by type</span>
+          <select id="filter-type"><option value="">ALL TYPES</option><option value="lost">LOST</option><option value="found">FOUND</option></select>
+        </label>
+        <label class="field">
+          <span class="sr-only">Filter by category</span>
+          <select id="filter-category"><option value="">ALL CATEGORIES</option></select>
+        </label>
+        <label class="field">
+          <span class="sr-only">Filter by location</span>
+          <select id="filter-location"><option value="">ALL LOCATIONS</option></select>
+        </label>
+        <label class="field">
+          <span class="sr-only">Sort results</span>
+          <select id="filter-sort">
+            <option value="newest">NEWEST FIRST</option>
+            <option value="oldest">OLDEST FIRST</option>
+            <option value="date_desc">DATE: NEWEST</option>
+            <option value="date_asc">DATE: OLDEST</option>
+            <option value="title_asc">TITLE: A-Z</option>
+          </select>
+        </label>
+        <button id="filter-reset" class="btn btn-outline btn-sm" type="button">RESET</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell main">
+    <section id="view-home" class="view" aria-labelledby="home-title">
+      <div class="hero">
+        <div class="hero-copy">
+          <span class="tag tag-pending">LIVE CAMPUS BOARD</span>
+          <h1 id="home-title">LOST SOMETHING?<br /><span class="highlight">FIND IT HERE.</span></h1>
+          <p>The official Sai University noticeboard for everything left behind. Scan fast, claim safely, reunite faster.</p>
+          <div class="hero-actions">
+            <button class="btn btn-accent" type="button" data-nav="report">+ REPORT AN ITEM</button>
+            <button class="btn btn-dark" type="button" data-nav="dashboard">TRACK MY CLAIMS</button>
+          </div>
+        </div>
+        <div class="hero-stats" aria-label="Quick summary">
+          <div><strong id="hero-lost">--</strong><span>ACTIVE LOST</span></div>
+          <div><strong id="hero-found">--</strong><span>ACTIVE FOUND</span></div>
+          <div><strong id="hero-resolved">--</strong><span>RESOLVED</span></div>
+        </div>
+      </div>
+
+      <div class="section-heading">
+        <h2>CAMPUS BOARD</h2>
+        <span id="result-count" class="mono-note">LOADING LISTINGS...</span>
+      </div>
+      <div id="item-grid" class="item-grid" aria-live="polite"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <strong>NOTHING HERE YET.</strong>
+        <p>Try clearing a filter or be the first to report an item.</p>
+        <button class="btn btn-dark" type="button" id="empty-reset">CLEAR FILTERS</button>
+      </div>
+      <div id="pagination" class="pagination" hidden></div>
+    </section>
+
+    <section id="view-report" class="view hidden" aria-labelledby="report-title">
+      <div class="page-heading">
+        <div>
+          <span class="tag tag-lost">REPORT FORM</span>
+          <h1 id="report-title">POST AN ITEM</h1>
+          <p id="report-subtitle">Lost something or found something? Give the campus just enough detail to match it.</p>
+        </div>
+        <button class="btn btn-outline" type="button" data-nav="home">&larr; BACK TO BOARD</button>
+      </div>
+
+      <form id="report-form" class="panel form-grid" novalidate>
+        <div class="field span-2">
+          <label for="r-title">ITEM TITLE <span class="required">*</span></label>
+          <input id="r-title" name="title" type="text" maxlength="120" placeholder="e.g. Black Sony headphones" required />
+          <small class="error-text" data-error="title"></small>
+        </div>
+
+        <div class="field">
+          <label for="r-type">TYPE <span class="required">*</span></label>
+          <select id="r-type" name="type" required><option value="">SELECT TYPE</option><option value="lost">LOST</option><option value="found">FOUND</option></select>
+          <small class="error-text" data-error="type"></small>
+        </div>
+
+        <div class="field">
+          <label for="r-category">CATEGORY <span class="required">*</span></label>
+          <select id="r-category" name="category" required><option value="">SELECT CATEGORY</option></select>
+          <small class="error-text" data-error="category"></small>
+        </div>
+
+        <div class="field span-2">
+          <label for="r-description">DESCRIPTION <span class="required">*</span></label>
+          <textarea id="r-description" name="description" rows="4" maxlength="2000" placeholder="Brand, colour, distinguishing marks, where you last saw it..." required></textarea>
+          <small class="error-text" data-error="description"></small>
+        </div>
+
+        <div class="field">
+          <label for="r-location">CAMPUS LOCATION <span class="required">*</span></label>
+          <select id="r-location" name="location" required><option value="">SELECT LOCATION</option></select>
+          <small class="error-text" data-error="location"></small>
+        </div>
+
+        <div class="field">
+          <label for="r-date">DATE <span class="required">*</span></label>
+          <input id="r-date" name="date" type="date" required />
+          <small class="error-text" data-error="date"></small>
+        </div>
+
+        <div class="field">
+          <label for="r-image">IMAGE UPLOAD <span class="optional">(OPTIONAL)</span></label>
+          <input id="r-image" name="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif" />
+          <small class="hint">PNG/JPG/WEBP, max 5 MB.</small>
+        </div>
+
+        <div class="field">
+          <label for="r-image-url">OR IMAGE URL <span class="optional">(OPTIONAL)</span></label>
+          <input id="r-image-url" name="imageUrl" type="url" placeholder="https://..." />
+          <small class="hint">Upload wins if both are provided.</small>
+        </div>
+
+        <div class="image-preview-wrap" id="image-preview-wrap" hidden>
+          <img id="image-preview" alt="Selected item preview" />
+          <button class="btn btn-outline btn-xs" type="button" id="clear-image">REMOVE IMAGE</button>
+        </div>
+
+        <div class="form-actions span-2">
+          <button class="btn btn-accent" type="submit" id="report-submit">POST TO CAMPUS BOARD</button>
+          <button class="btn btn-outline" type="button" id="report-cancel">CANCEL</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="view-dashboard" class="view hidden" aria-labelledby="dashboard-title">
+      <div class="page-heading">
+        <div>
+          <span class="tag tag-pending">MY SPACE</span>
+          <h1 id="dashboard-title">YOUR DASHBOARD</h1>
+          <p>Manage what you reported and follow every claim you submitted or received.</p>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Dashboard sections">
+        <button class="tab active" type="button" data-dtab="items" role="tab">MY LISTINGS</button>
+        <button class="tab" type="button" data-dtab="submitted" role="tab">CLAIMS I SENT</button>
+        <button class="tab" type="button" data-dtab="received" role="tab">CLAIMS ON MY ITEMS</button>
+      </div>
+      <div id="dashboard-panel" class="panel" aria-live="polite"></div>
+    </section>
+
+    <section id="view-admin" class="view hidden" aria-labelledby="admin-title">
+      <div class="page-heading">
+        <div>
+          <span class="tag tag-lost">ADMIN CONTROL</span>
+          <h1 id="admin-title">MODERATION DESK</h1>
+          <p>Overview, listings, claims and user roles — all in one hard-bordered place.</p>
+        </div>
+        <button class="btn btn-outline" type="button" id="admin-refresh">REFRESH DATA</button>
+      </div>
+      <div id="admin-stats" class="stats-grid" aria-live="polite"></div>
+      <div class="tabs" role="tablist" aria-label="Admin sections">
+        <button class="tab active" type="button" data-atab="items" role="tab">LISTINGS</button>
+        <button class="tab" type="button" data-atab="claims" role="tab">CLAIMS</button>
+        <button class="tab" type="button" data-atab="users" role="tab">USERS</button>
+      </div>
+      <div id="admin-panel" class="panel" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-inner">
+      <strong>SAI UNIVERSITY // LOST &amp; FOUND</strong>
+      <span>BUILT FOR STUDENTS. RUN BY STUDENTS.</span>
+    </div>
+  </footer>
+
+  <div id="modal-root"></div>
+  <div id="toast-stack" role="status" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
