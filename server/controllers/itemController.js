@@ -8,6 +8,28 @@ const { uploadDir } = require('../config/upload');
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+function locationLabel(location) {
+  const room = /^AB\d-(\d{3})$/.exec(location);
+  if (room) return `ROOM ${room[1]}`;
+  const blockPlace = /^AB\d - (.+)$/.exec(location);
+  if (blockPlace) return blockPlace[1].toUpperCase();
+  if (location === 'AB1 BACKSIDE') return 'BACKSIDE';
+  if (location === 'AB1 RECEPTION') return 'RECEPTION';
+  if (location.startsWith('STUDENT LOUNGE')) return 'STUDENT LOUNGE (OPP. REGISTRY)';
+  return location.toUpperCase();
+}
+
+function searchTermsForQuery(q) {
+  const needle = String(q).trim().toLowerCase();
+  if (!needle) return [];
+
+  const terms = [q];
+  Item.LOCATIONS.forEach((location) => {
+    if (`${location} ${locationLabel(location)}`.toLowerCase().includes(needle)) terms.push(location);
+  });
+  return [...new Set(terms)];
+}
+
 const sortOptions = {
   newest: { createdAt: -1 },
   oldest: { createdAt: 1 },
@@ -35,7 +57,7 @@ exports.list = asyncHandler(async (req, res) => {
   const filter = {};
 
   if (q) {
-    const pattern = new RegExp(escapeRegex(q), 'i');
+    const pattern = new RegExp(searchTermsForQuery(q).map(escapeRegex).join('|'), 'i');
     filter.$or = [{ title: pattern }, { description: pattern }, { location: pattern }, { category: pattern }];
   }
   if (type) filter.type = type;

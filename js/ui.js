@@ -326,50 +326,25 @@ function locationOptionLabel(location) {
 export function populateLocationSelect(select, groups, placeholder) {
   if (!select || select.dataset.locationPickerReady === 'true') return;
 
-  const picker = document.createElement('div');
-  picker.className = 'location-picker';
-  const search = document.createElement('input');
-  search.type = 'search';
-  search.className = 'location-search';
-  search.placeholder = 'SEARCH ROOMS, LABS AND AREAS';
-  search.setAttribute('aria-label', 'Filter campus locations');
-
-  select.parentNode.insertBefore(picker, select);
-  picker.append(search, select);
+  select.title = 'Type a room, lab, or area name to jump to it';
   select.dataset.locationPickerReady = 'true';
 
-  const build = () => {
-    const current = select.value;
-    const query = search.value.trim().toLowerCase();
-    select.replaceChildren(new Option(placeholder, ''));
-    const visible = new Set();
+  const current = select.value;
+  select.replaceChildren(new Option(placeholder, ''));
 
-    groups.forEach((group) => {
-      const matches = group.locations.filter((location) =>
-        `${location} ${locationOptionLabel(location)}`.toLowerCase().includes(query));
-      if (!matches.length) return;
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = group.label;
-      matches.forEach((location) => {
-        optgroup.appendChild(new Option(locationOptionLabel(location), location));
-        visible.add(location);
-      });
-      select.appendChild(optgroup);
+  groups.forEach((group) => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    group.locations.forEach((location) => {
+      optgroup.appendChild(new Option(locationOptionLabel(location), location));
     });
+    select.appendChild(optgroup);
+  });
 
-    if (current && !visible.has(current)) {
-      select.insertBefore(new Option(locationOptionLabel(current), current), select.children[1] || null);
-    }
-    select.value = current || '';
-  };
-
-  search.addEventListener('input', build);
-  build();
+  select.value = current || '';
 }
 
 export function syncLocationSelect(select, value = '') {
   if (!select) return;
   select.value = value || '';
-  const search = select.parentElement?.querySelector('.location-search');
-  if (search) search.value = value || '';
 }

@@ -321,24 +321,6 @@ p {
   text-transform: uppercase;
 }
 
-.location-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.location-search {
-  min-height: 38px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.toolbar .location-search {
-  min-height: 38px;
-}
-
 /* Buttons */
 .btn {
   display: inline-flex;
