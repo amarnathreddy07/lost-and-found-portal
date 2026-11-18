@@ -3,9 +3,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 
-const uploadDir = process.env.VERCEL
-  ? path.join('/tmp', 'uploads')
-  : path.join(__dirname, '..', 'uploads');
+const uploadDir = path.join(__dirname, '..', 'uploads');
 const maxMb = Number(process.env.UPLOAD_MAX_MB || 5);
 
 const allowedExtensions = {
