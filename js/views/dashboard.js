@@ -42,6 +42,7 @@ function submittedCard(claim) {
       <div class="list-card-body">
         <strong>YOUR PROOF:</strong> ${escapeHtml(claim.proof)}<br />
         <span class="mono-note">SUBMITTED ${formatDate(claim.createdAt)} &middot; ITEM STATUS: ${escapeHtml(claim.item?.status || 'unknown')}</span>
+        ${claim.reviewedBy?.name ? `<br /><strong>REVIEWED BY:</strong> ${escapeHtml(claim.reviewedBy.name)}${claim.reviewedAt ? ` &middot; ${formatDate(claim.reviewedAt)}` : ''}` : ''}
       </div>
     </div>`;
 }

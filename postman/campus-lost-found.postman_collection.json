@@ -654,7 +654,7 @@
           ]
         },
         {
-          "name": "Owner cannot claim own item (400)",
+          "name": "Reporter cannot claim own item (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -734,7 +734,7 @@
           ]
         },
         {
-          "name": "Owner approves claim",
+          "name": "Reporter approves claim",
           "request": {
             "method": "PATCH",
             "header": [

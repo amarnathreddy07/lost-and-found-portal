@@ -8,8 +8,8 @@ import {
 
 function detailMarkup(item) {
   const user = getUser();
-  const owner = item.reportedBy || {};
-  const mine = user && owner._id === user.id;
+  const reporter = item.reportedBy || {};
+  const mine = user && reporter._id === user.id;
   const canManage = user && (mine || isAdmin());
   const status = item.status || 'active';
 
@@ -24,7 +24,7 @@ function detailMarkup(item) {
     accessBlock = `
       <form class="claim-box" id="claim-form" novalidate>
         <h3>CLAIM THIS ITEM</h3>
-        <p class="hint">Tell the owner how you know it is yours. Specific details work best.</p>
+        <p class="hint">Tell the reporter how you know it is yours. Specific details work best.</p>
         <div class="field">
           <label for="claim-proof">PROOF / NOTES <span class="required">*</span></label>
           <textarea id="claim-proof" name="proof" rows="3" minlength="10" maxlength="1500" placeholder="e.g. My name is written inside the cover..." required></textarea>
@@ -59,7 +59,7 @@ function detailMarkup(item) {
     <div class="detail-grid">
       <div><small>CAMPUS LOCATION</small><strong>${escapeHtml(item.location)}</strong></div>
       <div><small>DATE REPORTED</small><strong>${formatCalendarDate(item.date)}</strong></div>
-      <div><small>REPORTED BY</small><strong>${escapeHtml(owner.name || 'Campus member')}</strong></div>
+      <div><small>REPORTED BY</small><strong>${escapeHtml(reporter.name || 'Campus member')}</strong></div>
       <div><small>POSTED</small><strong>${formatDate(item.createdAt)}</strong></div>
     </div>
     ${accessBlock}
@@ -142,8 +142,8 @@ export async function openItem(id) {
   modal.setTitle(item.title.toUpperCase());
   modal.body.innerHTML = detailMarkup(item);
 
-  const owner = item.reportedBy || {};
-  const canManage = getUser() && (owner._id === getUser().id || isAdmin());
+  const reporter = item.reportedBy || {};
+  const canManage = getUser() && (reporter._id === getUser().id || isAdmin());
 
   modal.body.addEventListener('click', async (event) => {
     if (!(event.target instanceof Element)) return;
@@ -209,7 +209,7 @@ export async function openItem(id) {
       if (submitting) return;
       const proof = claimForm.elements.proof.value.trim();
       if (proof.length < 10) {
-        showFieldErrors(claimForm, [{ field: 'proof', message: 'Tell the owner at least 10 characters of proof.' }]);
+        showFieldErrors(claimForm, [{ field: 'proof', message: 'Tell the reporter at least 10 characters of proof.' }]);
         return;
       }
       clearFormErrors(claimForm);

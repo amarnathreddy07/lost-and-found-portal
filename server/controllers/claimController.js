@@ -3,23 +3,46 @@ const Item = require('../models/Item');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 
+function reporterId(item) {
+  return String(item.reportedBy?._id || item.reportedBy || '');
+}
+
 exports.create = asyncHandler(async (req, res) => {
   const { itemId, proof } = req.body;
   const item = await Item.findById(itemId);
   if (!item) throw new ApiError(404, 'That listing no longer exists.');
-  if (item.reportedBy.toString() === req.user.id) {
+  if (reporterId(item) === String(req.user.id)) {
     throw new ApiError(400, 'You cannot claim an item you reported yourself.');
   }
   if (item.status !== 'active') {
     throw new ApiError(409, 'This item is no longer accepting claims.');
   }
 
-  const duplicate = await Claim.findOne({ item: item._id, claimant: req.user.id });
-  if (duplicate) throw new ApiError(409, 'You have already submitted a claim for this item.');
+  let claim = await Claim.findOne({ item: item._id, claimant: req.user.id });
+  let resubmitted = false;
+  if (claim) {
+    if (claim.status !== 'rejected') {
+      throw new ApiError(409, 'You have already submitted a claim for this item.');
+    }
+    claim.proof = proof;
+    claim.status = 'pending';
+    claim.reviewedAt = undefined;
+    claim.reviewedBy = undefined;
+    resubmitted = true;
+  } else {
+    claim = new Claim({ item: item._id, claimant: req.user.id, proof });
+  }
 
-  const claim = await Claim.create({ item: item._id, claimant: req.user.id, proof });
+  await claim.save();
+  await claim.populate('claimant', 'name');
   await claim.populate('item', 'title type imageUrl status');
-  res.status(201).json({ success: true, message: 'Claim submitted. The owner has been notified.', claim });
+  res.status(201).json({
+    success: true,
+    message: resubmitted
+      ? 'Claim resubmitted. The reporter can now review it.'
+      : 'Claim submitted. The reporter can now review it.',
+    claim
+  });
 });
 
 exports.mine = asyncHandler(async (req, res) => {
@@ -67,8 +90,8 @@ exports.review = asyncHandler(async (req, res) => {
 
   const item = await Item.findById(claim.item);
   if (!item) throw new ApiError(404, 'The linked listing no longer exists.');
-  if (item.reportedBy.toString() !== req.user.id && req.user.role !== 'admin') {
-    throw new ApiError(403, 'Only the item owner or an admin can review this claim.');
+  if (reporterId(item) !== String(req.user.id) && req.user.role !== 'admin') {
+    throw new ApiError(403, 'Only the item reporter or an admin can review this claim.');
   }
 
   if (claim.status !== 'pending') {
@@ -101,7 +124,11 @@ exports.review = asyncHandler(async (req, res) => {
 exports.all = asyncHandler(async (_req, res) => {
   const claims = await Claim.find()
     .sort({ createdAt: -1 })
-    .populate('item', 'title type status imageUrl')
+    .populate({
+      path: 'item',
+      select: 'title type status imageUrl',
+      populate: { path: 'reportedBy', select: 'name' }
+    })
     .populate('claimant', 'name email')
     .populate('reviewedBy', 'name')
     .lean();

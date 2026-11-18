@@ -106,6 +106,7 @@ exports.create = asyncHandler(async (req, res) => {
     imageUrl: imageUrlFor(req),
     reportedBy: req.user.id
   });
+  await item.populate('reportedBy', 'name');
 
   res.status(201).json({
     success: true,
@@ -132,6 +133,7 @@ exports.update = asyncHandler(async (req, res) => {
   if (updates.date) updates.date = new Date(updates.date);
 
   const item = await Item.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+  await item.populate('reportedBy', 'name');
   res.json({ success: true, message: 'Listing updated.', item });
 });
 
@@ -157,5 +159,6 @@ exports.setStatus = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!item) throw new ApiError(404, 'Item not found.');
+  await item.populate('reportedBy', 'name');
   res.json({ success: true, message: `Listing marked as ${item.status}.`, item });
 });

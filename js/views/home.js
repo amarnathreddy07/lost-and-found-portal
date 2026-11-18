@@ -22,7 +22,7 @@ export function initHome() {
 }
 
 function cardMarkup(item) {
-  const owner = item.reportedBy?.name || 'Campus member';
+  const reporter = item.reportedBy?.name || 'Campus member';
   const status = item.status || 'active';
   const location = item.location || '—';
   return `
@@ -42,7 +42,7 @@ function cardMarkup(item) {
         <h3 class="card-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
         <p class="card-desc">${escapeHtml(truncate(item.description, 105))}</p>
         <div class="card-foot">
-          <span class="mono-note">${formatCalendarDate(item.date)} &middot; ${escapeHtml(owner)}</span>
+          <span class="mono-note">${formatCalendarDate(item.date)} &middot; REPORTED BY ${escapeHtml(reporter)}</span>
           <button class="btn btn-sm" type="button" data-open-item="${escapeHtml(item._id)}" aria-label="Open ${escapeHtml(item.title)}">OPEN</button>
         </div>
       </div>

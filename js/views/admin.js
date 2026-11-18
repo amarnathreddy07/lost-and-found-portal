@@ -29,7 +29,7 @@ function itemsTable(items) {
   if (!items.length) return '<div class="inline-notice">NO LISTINGS FOUND.</div>';
   return `
     <div class="table-wrap"><table>
-      <thead><tr><th>ITEM</th><th>TYPE</th><th>STATUS</th><th>OWNER</th><th>LOCATION</th><th>DATE</th><th>ACTIONS</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>TYPE</th><th>STATUS</th><th>REPORTER</th><th>LOCATION</th><th>DATE</th><th>ACTIONS</th></tr></thead>
       <tbody>${items.map((item) => {
         const id = escapeHtml(item._id);
         return `
@@ -54,12 +54,13 @@ function claimsTable(claims) {
   if (!claims.length) return '<div class="inline-notice">NO CLAIMS FOUND.</div>';
   return `
     <div class="table-wrap"><table>
-      <thead><tr><th>ITEM</th><th>CLAIMANT</th><th>PROOF</th><th>STATUS</th><th>DATE</th><th>ACTIONS</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>REPORTER</th><th>CLAIMANT</th><th>PROOF</th><th>STATUS</th><th>DATE</th><th>ACTIONS</th></tr></thead>
       <tbody>${claims.map((claim) => {
         const id = escapeHtml(claim._id);
         return `
         <tr>
           <td><strong>${escapeHtml(claim.item?.title || 'Removed listing')}</strong><br />${typeBadge(claim.item?.type || 'lost')}</td>
+          <td>${escapeHtml(claim.item?.reportedBy?.name || '—')}</td>
           <td>${escapeHtml(claim.claimant?.name || '—')}<br /><span class="mono-note">${escapeHtml(claim.claimant?.email || '')}</span></td>
           <td>${escapeHtml(truncate(claim.proof, 90))}</td>
           <td>${statusBadge(claim.status)}</td>
@@ -145,8 +146,17 @@ function syncUserFilters(users) {
   });
 }
 
+function syncAdminActions() {
+  const show = isAdmin() && state.adminTab === 'users';
+  const createButton = $('#admin-create-user');
+  const importButton = $('#admin-import-users');
+  if (createButton) createButton.hidden = !show;
+  if (importButton) importButton.hidden = !show;
+}
+
 function activateAdminTab(tabName) {
   state.adminTab = tabName;
+  syncAdminActions();
   $$('[data-atab]').forEach((node) => {
     const active = node.dataset.atab === tabName;
     node.classList.toggle('active', active);
@@ -651,6 +661,7 @@ export function initAdmin() {
 
 export async function renderAdmin() {
   const seq = ++state.adminSeq;
+  syncAdminActions();
   const panel = $('#admin-panel');
   const statsBox = $('#admin-stats');
 

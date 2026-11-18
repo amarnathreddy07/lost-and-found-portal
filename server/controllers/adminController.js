@@ -251,6 +251,7 @@ exports.removeUser = asyncHandler(async (req, res) => {
   const items = await Item.find({ reportedBy: user._id }).select('imageUrl').lean();
   const itemIds = items.map((item) => item._id);
   await Claim.deleteMany({ $or: [{ item: { $in: itemIds } }, { claimant: user._id }] });
+  await Claim.updateMany({ reviewedBy: user._id }, { $unset: { reviewedBy: '' } });
   await Item.deleteMany({ reportedBy: user._id });
 
   for (const item of items) {

@@ -39,7 +39,7 @@ function renderView(view = state.currentView) {
   else if (view === 'admin') renderAdmin();
 }
 
-function navigate(view, { replace = false } = {}) {
+function navigate(view, { replace = false, dashboardTab } = {}) {
   window.clearTimeout(filterTimer);
 
   let target = VIEWS.includes(view) ? view : 'home';
@@ -50,6 +50,15 @@ function navigate(view, { replace = false } = {}) {
   }
 
   state.currentView = target;
+  if (dashboardTab) {
+    state.dashboardTab = dashboardTab;
+    $$('[data-dtab]').forEach((tab) => {
+      const active = tab.dataset.dtab === dashboardTab;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+      if (active) $('#dashboard-panel').setAttribute('aria-labelledby', tab.id);
+    });
+  }
   $$('.view').forEach((section) => section.classList.toggle('hidden', section.id !== `view-${target}`));
   $$('[data-nav]').forEach((button) => {
     const active = button.dataset.nav === target;
@@ -123,7 +132,7 @@ function bindGlobalEvents() {
     const nav = event.target.closest('[data-nav]');
     if (nav) {
       event.preventDefault();
-      navigate(nav.dataset.nav);
+      navigate(nav.dataset.nav, { dashboardTab: nav.dataset.dashboardTab });
       return;
     }
     if (event.target.closest('#auth-open')) emit('openAuth', { mode: 'login' });

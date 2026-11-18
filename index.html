@@ -97,7 +97,7 @@
           <p>The official Sai University noticeboard for everything left behind. Scan fast, claim safely, reunite faster.</p>
           <div class="hero-actions">
             <button class="btn btn-accent" type="button" data-nav="report">+ REPORT AN ITEM</button>
-            <button class="btn btn-dark" type="button" data-nav="dashboard">TRACK MY CLAIMS</button>
+            <button class="btn btn-dark" type="button" data-nav="dashboard" data-dashboard-tab="submitted">TRACK MY CLAIMS</button>
           </div>
         </div>
         <div class="hero-stats" aria-label="Quick summary">
@@ -223,8 +223,8 @@
         </div>
         <div class="page-actions">
           <button class="btn btn-outline" type="button" id="admin-refresh">REFRESH DATA</button>
-          <button class="btn btn-accent" type="button" id="admin-create-user">CREATE USER</button>
-          <button class="btn btn-outline" type="button" id="admin-import-users">IMPORT CSV</button>
+          <button class="btn btn-accent" type="button" id="admin-create-user" hidden>CREATE USER</button>
+          <button class="btn btn-outline" type="button" id="admin-import-users" hidden>IMPORT CSV</button>
         </div>
       </div>
       <div id="admin-stats" class="stats-grid" aria-live="polite"></div>

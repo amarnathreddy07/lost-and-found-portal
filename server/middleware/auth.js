@@ -73,7 +73,8 @@ const requireAdmin = (req, _res, next) => {
 const ownerOrAdmin = (paramName = 'id') => asyncHandler(async (req, _res, next) => {
   const item = await Item.findById(req.params[paramName]);
   if (!item) throw new ApiError(404, 'Item not found.');
-  if (item.reportedBy.toString() !== req.user.id && req.user.role !== 'admin') {
+  const reporter = item.reportedBy?._id || item.reportedBy;
+  if (String(reporter || '') !== String(req.user.id) && req.user.role !== 'admin') {
     throw new ApiError(403, 'You can only manage items you reported.');
   }
   req.item = item;

@@ -40,20 +40,15 @@ export function safeImage(url) {
 export function imageMarkup(url, placeholder = '?', { expandable = false } = {}) {
   const folderId = driveFolderId(url);
   if (folderId) {
-    const expand = expandable
-      ? `<button class="media-expand" type="button" data-drive-folder="${escapeHtml(folderId)}" aria-label="View Drive folder" title="View Drive folder">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
-          </svg>
-        </button>`
+    const viewButton = expandable
+      ? `<button class="media-folder-hint" type="button" data-drive-folder="${escapeHtml(folderId)}" aria-label="View Drive folder" title="View Drive folder">VIEW FOLDER</button>`
       : '';
-    const hint = expandable ? '<span class="media-folder-hint">VIEW FOLDER</span>' : '';
     return `<div class="media-placeholder media-folder" role="img" aria-label="Drive folder">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M3 6.5h6l2 2h10v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
         <path d="M3 9.5h18" />
       </svg>
-    </div>${hint}${expand}`;
+    </div>${viewButton}`;
   }
   const safe = safeImage(url);
   if (!safe) return `<div class="media-placeholder">${escapeHtml(placeholder)}</div>`;
