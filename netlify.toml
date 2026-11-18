@@ -2,7 +2,6 @@
   base = "."
   publish = "client"
   functions = "netlify/functions"
-  command = "npm install --prefix server"
 
 [build.environment]
   NODE_VERSION = "20"

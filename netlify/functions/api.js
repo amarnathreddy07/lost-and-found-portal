@@ -1,4 +1,4 @@
-const serverless = require('../../server/node_modules/serverless-http');
+const serverless = require('serverless-http');
 const app = require('../../server/app');
 const { connectDB } = require('../../server/config/db');
 const { seedDatabase } = require('../../server/utils/seed');
