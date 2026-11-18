@@ -87,6 +87,6 @@ exports.logout = asyncHandler(async (req, res) => {
   if (req.user) {
     await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
   }
-  res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/' });
+  res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', secure: process.env.NODE_ENV === 'production', path: '/' });
   res.json({ success: true, message: 'Signed out successfully.' });
 });

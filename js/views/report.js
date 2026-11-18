@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, assetUrl } from '../api.js';
 import { state } from '../store.js';
 import { emit } from '../events.js';
 import { CATEGORIES, LOCATIONS, LOCATION_GROUPS } from '../constants.js';
@@ -76,7 +76,7 @@ function updatePreview(form) {
 
   const typedUrl = form.elements.imageUrl.value.trim();
   const fallback = state.editingItem?.imageUrl || '';
-  const source = file ? URL.createObjectURL(file) : safeImage(typedUrl || fallback);
+  const source = file ? URL.createObjectURL(file) : assetUrl(safeImage(typedUrl || fallback));
 
   if (file) previewUrl = source;
 

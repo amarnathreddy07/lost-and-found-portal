@@ -1,3 +1,5 @@
+import { assetUrl } from './api.js';
+
 export const $ = (selector, root = document) => root.querySelector(selector);
 export const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
@@ -21,7 +23,7 @@ export function safeImage(url) {
 export function imageMarkup(url, placeholder = '?') {
   const safe = safeImage(url);
   if (!safe) return `<div class="media-placeholder">${escapeHtml(placeholder)}</div>`;
-  return `<img src="${escapeHtml(safe)}" alt="Reported item" loading="lazy" />
+  return `<img src="${escapeHtml(assetUrl(safe))}" alt="Reported item" loading="lazy" />
     <div class="media-placeholder" hidden>${escapeHtml(placeholder)}</div>`;
 }
 

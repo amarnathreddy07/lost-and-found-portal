@@ -1,4 +1,13 @@
 const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/me', '/auth/change-password'];
+const API_BASE = String(document.querySelector('meta[name="api-base"]')?.getAttribute('content') || '').replace(/\/$/, '');
+
+export function assetUrl(path) {
+  const value = String(path || '');
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  if (API_BASE && value.startsWith('/')) return `${API_BASE}${value}`;
+  return value;
+}
 
 export function withParams(path, params = {}) {
   if (typeof path === 'string' && path.startsWith('?')) return path;
@@ -31,7 +40,7 @@ export async function request(path, options = {}) {
 
   let response;
   try {
-    response = await fetch(`/api${path}`, requestOptions);
+    response = await fetch(`${API_BASE}/api${path}`, requestOptions);
   } catch (_error) {
     const networkError = new Error('Cannot reach the server. Check your connection and try again.');
     networkError.isNetworkError = true;

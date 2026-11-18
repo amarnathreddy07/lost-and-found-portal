@@ -10,7 +10,7 @@ function formMarkup(mode) {
   return `
     <form id="auth-form" novalidate>
       <div class="auth-brand">
-        <img src="/assets/saiu-logo-bw.png" alt="" aria-hidden="true" />
+        <img src="assets/saiu-logo-bw.png" alt="" aria-hidden="true" />
         <span>SAI UNIVERSITY</span>
       </div>
       ${isLogin ? '' : `
