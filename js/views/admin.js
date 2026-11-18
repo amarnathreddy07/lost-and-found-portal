@@ -100,6 +100,7 @@ function usersTable(users) {
           <td>${user.mustChangePassword ? '<span class="badge badge-pending">CHANGE REQUIRED</span>' : '<span class="badge badge-active">READY</span>'}</td>
           <td>${formatDate(user.createdAt)}</td>
           <td><div class="row-actions">
+            <button class="btn btn-xs" type="button" data-aaction="edit-user" data-id="${id}">EDIT</button>
             <button class="btn btn-xs" type="button" data-aaction="reset-password" data-id="${id}" data-name="${escapeHtml(user.name)}">RESET PASSWORD</button>
             <button class="btn btn-xs btn-danger" type="button" data-aaction="delete-user" data-id="${id}" ${isSelf ? 'disabled' : ''}>DELETE USER</button>
           </div></td>
@@ -195,7 +196,7 @@ async function openCreateUser() {
         <label for="create-profile">PRELOADED PROFILE</label>
         <select id="create-profile" ${available.length ? '' : 'disabled'}>
           <option value="">ENTER DETAILS MANUALLY</option>
-          ${available.map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name)} — ${escapeHtml(entry.email)}</option>`).join('')}
+          ${available.map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name ? `${entry.name} — ${entry.email}` : entry.email)}</option>`).join('')}
         </select>
       </div>
       <div class="field" style="margin-bottom:14px">
@@ -209,8 +210,8 @@ async function openCreateUser() {
         <small class="error-text" data-error="email"></small>
       </div>
       <div class="field" style="margin-bottom:14px">
-        <label for="create-student-id">PRN / STUDENT ID</label>
-        <input id="create-student-id" name="studentId" type="text" />
+        <label for="create-student-id">PRN / STUDENT ID <span class="required">*</span></label>
+        <input id="create-student-id" name="studentId" type="text" required />
         <small class="error-text" data-error="studentId"></small>
       </div>
       <div class="field" style="margin-bottom:14px">
@@ -252,7 +253,7 @@ async function openCreateUser() {
     const visible = visibleEntries();
     const selected = profileSelect.value;
     profileSelect.innerHTML = `<option value="">ENTER DETAILS MANUALLY</option>${visible
-      .map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name)} — ${escapeHtml(entry.email)}</option>`).join('')}`;
+      .map((entry) => `<option value="${escapeHtml(entry.email)}">${escapeHtml(entry.name ? `${entry.name} — ${entry.email}` : entry.email)}</option>`).join('')}`;
     profileSelect.value = visible.some((entry) => entry.email === selected) ? selected : '';
   };
 
@@ -298,6 +299,7 @@ async function openCreateUser() {
     payload.phone = String(payload.phone || '').trim();
     const errors = [];
     if (payload.name.length < 2) errors.push({ field: 'name', message: 'Enter the full name.' });
+    if (!payload.studentId) errors.push({ field: 'studentId', message: 'Enter the PRN / student ID.' });
     if (!/^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i.test(payload.email)) {
       errors.push({ field: 'email', message: 'Use name.initial-YY@department.saiuniversity.edu.in.' });
     }
@@ -312,6 +314,93 @@ async function openCreateUser() {
       modal.close();
       toast(result.message, 'success');
       await activateAdminTab('users');
+    } catch (error) {
+      if (error.details?.length) showFieldErrors(form, error.details);
+      toast(error.message, 'error');
+      setLoading(submit, false);
+    }
+  });
+}
+
+async function openEditUser(id) {
+  const response = await api.admin.users();
+  const user = (response.users || []).find((entry) => entry._id === id);
+  if (!user) throw new Error('User not found.');
+
+  const modal = openModal({
+    title: 'EDIT USER',
+    body: `<form id="edit-user-form" style="margin-top:14px">
+      <div class="field" style="margin-bottom:14px">
+        <label for="edit-name">FULL NAME <span class="required">*</span></label>
+        <input id="edit-name" name="name" type="text" value="${escapeHtml(user.name)}" required />
+        <small class="error-text" data-error="name"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="edit-email">UNIVERSITY EMAIL <span class="required">*</span></label>
+        <input id="edit-email" name="email" type="email" value="${escapeHtml(user.email)}" required />
+        <small class="error-text" data-error="email"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="edit-student-id">PRN / STUDENT ID <span class="required">*</span></label>
+        <input id="edit-student-id" name="studentId" type="text" value="${escapeHtml(user.studentId || '')}" required />
+        <small class="error-text" data-error="studentId"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="edit-department">DEPARTMENT</label>
+        <input id="edit-department" name="department" type="text" value="${escapeHtml(user.department || studentMeta(user.email).department || '')}" />
+        <small class="error-text" data-error="department"></small>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="edit-phone">PHONE</label>
+        <input id="edit-phone" name="phone" type="tel" value="${escapeHtml(user.phone || '')}" />
+        <small class="error-text" data-error="phone"></small>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-cancel>CANCEL</button>
+        <button class="btn btn-accent" type="submit">SAVE CHANGES</button>
+      </div>
+    </form>`
+  });
+
+  const form = $('#edit-user-form', modal.body);
+  const submit = $('button[type="submit"]', form);
+  const emailField = $('#edit-email', form);
+  const departmentField = $('#edit-department', form);
+  const initialDepartment = studentMeta(user.email).department || '';
+
+  emailField.addEventListener('blur', () => {
+    if (!departmentField.value.trim() || departmentField.value.trim() === initialDepartment) {
+      departmentField.value = studentMeta(emailField.value).department || '';
+    }
+  });
+
+  $('[data-cancel]', modal.body).addEventListener('click', () => modal.close());
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearFormErrors(form);
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.name = String(payload.name || '').trim();
+    payload.email = String(payload.email || '').trim().toLowerCase();
+    payload.studentId = String(payload.studentId || '').trim();
+    payload.department = String(payload.department || '').trim();
+    payload.phone = String(payload.phone || '').trim();
+    const errors = [];
+    if (payload.name.length < 2) errors.push({ field: 'name', message: 'Enter the full name.' });
+    if (!payload.studentId) errors.push({ field: 'studentId', message: 'Enter the PRN / student ID.' });
+    if (!/^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i.test(payload.email)) {
+      errors.push({ field: 'email', message: 'Use name.initial-YY@department.saiuniversity.edu.in.' });
+    }
+    if (errors.length) {
+      showFieldErrors(form, errors);
+      return;
+    }
+
+    setLoading(submit, true);
+    try {
+      const result = await api.admin.updateUser(id, payload);
+      modal.close();
+      toast(result.message, 'success');
+      renderAdmin();
     } catch (error) {
       if (error.details?.length) showFieldErrors(form, error.details);
       toast(error.message, 'error');
@@ -528,6 +617,15 @@ export function initAdmin() {
       } catch (error) {
         toast(error.message, 'error');
         setLoading(button, false);
+      }
+      return;
+    }
+
+    if (aaction === 'edit-user') {
+      try {
+        await openEditUser(id);
+      } catch (error) {
+        toast(error.message, 'error');
       }
       return;
     }

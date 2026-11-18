@@ -137,6 +137,8 @@ function bindGlobalEvents() {
     image.hidden = true;
     const fallback = image.parentElement?.querySelector('.media-placeholder');
     if (fallback) fallback.hidden = false;
+    const expand = image.parentElement?.querySelector('.media-expand');
+    if (expand) expand.hidden = true;
   }, true);
 
   window.addEventListener('auth:expired', () => {

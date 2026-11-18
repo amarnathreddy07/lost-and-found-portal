@@ -589,6 +589,71 @@ p {
   opacity: 0.28;
 }
 
+.media-folder {
+  opacity: 0.45;
+}
+
+.media-folder svg {
+  width: 64px;
+  height: 64px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.media-folder-hint {
+  position: absolute;
+  right: 50px;
+  bottom: 10px;
+  z-index: 3;
+  padding: 5px 8px;
+  border: 2px solid var(--ink);
+  background: var(--pending);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.media-expand {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: var(--border);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.media-expand:hover {
+  background: var(--pending);
+}
+
+.media-expand:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.media-expand svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
 .card-badges {
   position: absolute;
   top: 10px;
@@ -826,6 +891,7 @@ textarea[aria-invalid="true"] {
 }
 
 .image-preview-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -840,6 +906,26 @@ textarea[aria-invalid="true"] {
   height: 84px;
   object-fit: cover;
   border: 2px solid var(--ink);
+}
+
+.image-folder-note {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 2px dashed var(--ink);
+  background: var(--canvas);
+}
+
+.image-folder-note svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  opacity: 0.55;
 }
 
 .form-actions {
@@ -1060,6 +1146,52 @@ td .btn {
   padding: 18px;
 }
 
+.image-lightbox-overlay {
+  z-index: 110;
+  background: rgba(0, 0, 0, 0.86);
+}
+
+.image-lightbox {
+  width: min(100%, 1100px);
+  background: var(--ink);
+}
+
+.image-lightbox .modal-head {
+  border-bottom: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.image-lightbox .modal-close {
+  border-color: var(--paper);
+  box-shadow: 2px 2px 0 var(--paper);
+}
+
+.image-lightbox .modal-body {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  border: 2px solid var(--paper);
+  background: var(--paper);
+}
+
+.drive-folder-lightbox .modal-body {
+  padding: 10px;
+}
+
+.drive-folder-frame {
+  width: 100%;
+  height: 70vh;
+  border: 2px solid var(--paper);
+  background: var(--paper);
+}
+
 .auth-brand {
   display: flex;
   align-items: center;
@@ -1081,6 +1213,7 @@ td .btn {
 }
 
 .detail-media {
+  position: relative;
   height: 240px;
   border: var(--border);
   margin-bottom: 16px;

@@ -18,14 +18,20 @@ router.get('/items', [
 ], handleValidationErrors, adminController.items);
 router.get('/users', adminController.users);
 router.get('/users/preloaded', adminController.preloadedUsers);
-router.post('/users', [
+const userDetailRules = [
   body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Name must be 2-80 characters.'),
   body('email').trim().toLowerCase().isEmail().withMessage('Enter a valid email address.')
     .matches(UNIVERSITY_EMAIL_PATTERN).withMessage('Use name.initial-YY@department.saiuniversity.edu.in.'),
-  body('studentId').optional({ checkFalsy: true }).trim().isLength({ max: 30 }).withMessage('PRN is too long.'),
+  body('studentId').trim().notEmpty().withMessage('PRN is required.').isLength({ max: 30 }).withMessage('PRN is too long.'),
   body('department').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).withMessage('Department is too long.'),
   body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).withMessage('Phone number is too long.')
-], handleValidationErrors, adminController.createUser);
+];
+
+router.post('/users', userDetailRules, handleValidationErrors, adminController.createUser);
+router.patch('/users/:id', [
+  param('id').isMongoId().withMessage('Invalid user identifier.'),
+  ...userDetailRules
+], handleValidationErrors, adminController.updateUser);
 router.post('/users/import', csvUpload.single('file'), adminController.importUsers);
 router.post('/users/:id/reset-password', [
   param('id').isMongoId().withMessage('Invalid user identifier.'),

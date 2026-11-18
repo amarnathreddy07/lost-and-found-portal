@@ -21,7 +21,7 @@ function formMarkup(mode) {
         </div>`}
       <div class="field" style="margin-bottom:14px">
         <label for="auth-email">UNIVERSITY EMAIL <span class="required">*</span></label>
-        <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="amarnathreddy.s-29@scds.saiuniversity.edu.in" required />
+        <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="name.initial-YY@department.saiuniversity.edu.in" required />
         <small class="error-text" data-error="email"></small>
       </div>
       <div class="field" style="margin-bottom:14px">
@@ -31,8 +31,8 @@ function formMarkup(mode) {
       </div>
       ${isLogin ? '' : `
         <div class="field" style="margin-bottom:14px">
-          <label for="auth-student">PRN NUMBER <span class="optional">(OPTIONAL)</span></label>
-          <input id="auth-student" name="studentId" type="text" placeholder="PRN-001" />
+          <label for="auth-student">PRN NUMBER <span class="required">*</span></label>
+          <input id="auth-student" name="studentId" type="text" inputmode="numeric" pattern="\d+" placeholder="12345678" required />
           <small class="error-text" data-error="studentId"></small>
         </div>
         <div class="field" style="margin-bottom:14px">
@@ -70,6 +70,13 @@ function renderAuth(mode) {
     const errors = [];
     if (mode === 'register' && (values.name || '').trim().length < 2) {
       errors.push({ field: 'name', message: 'Enter your full name.' });
+    }
+    if (mode === 'register' && !(values.studentId || '').trim()) {
+      errors.push({ field: 'studentId', message: 'Enter your PRN number.' });
+    } else if (mode === 'register' && !/^\d+$/.test(String(values.studentId).trim())) {
+      errors.push({ field: 'studentId', message: 'PRN must contain digits only.' });
+    } else if (mode === 'register' && String(values.studentId).trim().length > 30) {
+      errors.push({ field: 'studentId', message: 'PRN must be 30 digits or fewer.' });
     }
     if (!/^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{2}@[A-Za-z]+(?:-[A-Za-z]+)*\.saiuniversity\.edu\.in$/i.test(values.email || '')) {
       errors.push({ field: 'email', message: 'Use name.initial-YY@department.saiuniversity.edu.in.' });

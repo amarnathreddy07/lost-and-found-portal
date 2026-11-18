@@ -24,6 +24,10 @@ const imageUrlRule = () => body('imageUrl')
   .optional({ checkFalsy: true })
   .custom((value) => /^https?:\/\/[^\s"'<>]+$/i.test(String(value)) || /^\/uploads\/[\w.-]+$/.test(String(value)))
   .withMessage('Image URL is invalid.');
+const driveLinkRule = () => body('driveLink')
+  .optional({ checkFalsy: true })
+  .custom((value) => /^https?:\/\/[^\s"'<>]+$/i.test(String(value)))
+  .withMessage('Drive link is invalid.');
 
 const createRules = [
   body('title').isLength({ min: 3, max: 120 }).withMessage('Title must be 3-120 characters.'),
@@ -32,7 +36,8 @@ const createRules = [
   body('description').isLength({ min: 10, max: 2000 }).withMessage('Description must be 10-2000 characters.'),
   body('location').isIn(Item.LOCATIONS).withMessage('Choose a valid campus location.'),
   dateRule(),
-  imageUrlRule()
+  imageUrlRule(),
+  driveLinkRule()
 ];
 
 const updateRules = [
@@ -42,7 +47,8 @@ const updateRules = [
   body('description').optional().isLength({ min: 10, max: 2000 }).withMessage('Description must be 10-2000 characters.'),
   body('location').optional().isIn(Item.LOCATIONS).withMessage('Choose a valid campus location.'),
   body('date').optional().custom(isRealDate).withMessage('Provide a valid date.'),
-  imageUrlRule()
+  imageUrlRule(),
+  driveLinkRule()
 ];
 
 const listRules = [

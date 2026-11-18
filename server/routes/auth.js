@@ -19,7 +19,9 @@ const registerRules = [
   body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Name must be 2-80 characters.'),
   universityEmail,
   strongPassword,
-  body('studentId').optional({ checkFalsy: true }).isLength({ max: 30 }).withMessage('PRN is too long.'),
+  body('studentId').trim().notEmpty().withMessage('PRN is required.')
+    .matches(/^\d+$/).withMessage('PRN must contain digits only.')
+    .isLength({ max: 30 }).withMessage('PRN is too long.'),
   body('phone').optional({ checkFalsy: true }).isLength({ max: 20 }).withMessage('Phone number is too long.')
 ];
 

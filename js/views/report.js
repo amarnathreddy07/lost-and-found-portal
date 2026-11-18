@@ -3,7 +3,7 @@ import { state } from '../store.js';
 import { emit } from '../events.js';
 import { CATEGORIES, LOCATIONS, LOCATION_GROUPS } from '../constants.js';
 import {
-  $, clearFormErrors, showFieldErrors, toast, setLoading, safeImage, imageMarkup,
+  $, clearFormErrors, showFieldErrors, toast, setLoading, safeImage, normalizeImageUrl, imageMarkup, driveFolderId,
   populateLocationSelect, syncLocationSelect
 } from '../ui.js';
 
@@ -41,7 +41,7 @@ function validate(form) {
     description: form.elements.description.value.trim(),
     location: form.elements.location.value,
     date: form.elements.date.value,
-    imageUrl: form.elements.imageUrl.value.trim()
+    driveLink: form.elements.driveLink.value.trim()
   };
 
   const errors = [];
@@ -51,7 +51,7 @@ function validate(form) {
   if (values.description.length < 10) errors.push({ field: 'description', message: 'Add at least 10 characters of detail.' });
   if (!LOCATIONS.includes(values.location)) errors.push({ field: 'location', message: 'Choose a campus location.' });
   if (!isValidDateInput(values.date)) errors.push({ field: 'date', message: 'Choose a valid date that is not in the future.' });
-  if (values.imageUrl && !safeImage(values.imageUrl)) errors.push({ field: 'imageUrl', message: 'Enter an http(s) image URL.' });
+  if (values.driveLink && !safeImage(values.driveLink)) errors.push({ field: 'driveLink', message: 'Enter a valid Google Drive link.' });
 
   const file = form.elements.image.files?.[0];
   if (file && !/^image\/(png|jpe?g|gif|webp|avif)$/i.test(file.type)) {
@@ -70,12 +70,26 @@ function updatePreview(form) {
   const file = form.elements.image.files?.[0];
   const wrap = $('#image-preview-wrap');
   const img = $('#image-preview');
+  const folderNote = $('#image-folder-note');
 
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = '';
 
-  const typedUrl = form.elements.imageUrl.value.trim();
-  const fallback = state.editingItem?.imageUrl || '';
+  const link = form.elements.driveLink.value.trim();
+  const stored = state.editingItem?.imageUrl || '';
+  if (!file && driveFolderId(link || stored)) {
+    img.hidden = true;
+    img.removeAttribute('src');
+    folderNote.hidden = false;
+    wrap.hidden = false;
+    return;
+  }
+
+  img.hidden = false;
+  folderNote.hidden = true;
+
+  const typedUrl = normalizeImageUrl(link);
+  const fallback = normalizeImageUrl(stored);
   const source = file ? URL.createObjectURL(file) : assetUrl(safeImage(typedUrl || fallback));
 
   if (file) previewUrl = source;
@@ -99,7 +113,9 @@ function resetForm() {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = '';
   $('#image-preview-wrap').hidden = true;
+  $('#image-preview').hidden = false;
   $('#image-preview').removeAttribute('src');
+  $('#image-folder-note').hidden = true;
 }
 
 export function initReport() {
@@ -112,11 +128,11 @@ export function initReport() {
   form.elements.date.max = localDateInput();
 
   form.elements.image.addEventListener('change', () => updatePreview(form));
-  form.elements.imageUrl.addEventListener('input', () => updatePreview(form));
+  form.elements.driveLink.addEventListener('input', () => updatePreview(form));
 
   $('#clear-image').addEventListener('click', () => {
     form.elements.image.value = '';
-    form.elements.imageUrl.value = '';
+    form.elements.driveLink.value = '';
     if (state.editingItem) state.editingItem = { ...state.editingItem, imageUrl: '' };
     updatePreview(form);
   });
@@ -140,8 +156,14 @@ export function initReport() {
     clearFormErrors(form);
     const payload = new FormData(form);
     const file = payload.get('image');
+    const driveLink = normalizeImageUrl(payload.get('driveLink') || '');
     if (!file || !file.name) payload.delete('image');
-    if (file && file.name) payload.delete('imageUrl');
+    if (file && file.name) {
+      payload.delete('driveLink');
+    } else {
+      payload.set('imageUrl', driveLink || state.editingItem?.imageUrl || '');
+      payload.delete('driveLink');
+    }
 
     submitting = true;
     const submit = $('#report-submit');
@@ -176,7 +198,7 @@ export function openReportForm(item = null) {
     form.elements.description.value = item.description || '';
     syncLocationSelect(form.elements.location, item.location || '');
     form.elements.date.value = dateInputValue(item.date);
-    form.elements.imageUrl.value = safeImage(item.imageUrl || '');
+    form.elements.driveLink.value = '';
     form.elements.image.value = '';
     $('#report-title').textContent = 'EDIT LISTING';
     $('#report-subtitle').textContent = 'Update the details below, then save your changes.';

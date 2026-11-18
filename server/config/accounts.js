@@ -3,27 +3,22 @@ const UNIVERSITY_EMAIL_PATTERN = /^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*\.[A-Za-z]-\d{
 
 const PRELOADED_USERS = [
   {
-    name: 'Amarnath Reddy',
     email: 'amarnathreddy.s-29@scds.saiuniversity.edu.in',
     studentId: 'SAI-29SCDS-001'
   },
   {
-    name: 'Arjun Mehta',
     email: 'arjunmehta.a-21@scds.saiuniversity.edu.in',
     studentId: 'SAI-21CS-014'
   },
   {
-    name: 'Meera Iyer',
     email: 'meeraiyer.m-22@ece.saiuniversity.edu.in',
     studentId: 'SAI-22EC-031'
   },
   {
-    name: 'Kabir Shah',
     email: 'kabirshah.k-20@me.saiuniversity.edu.in',
     studentId: 'SAI-20ME-008'
   },
   {
-    name: 'Diya Nair',
     email: 'diyanair.d-23@llb.saiuniversity.edu.in',
     studentId: 'SAI-23LLB-045'
   }

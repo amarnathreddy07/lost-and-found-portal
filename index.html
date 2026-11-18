@@ -174,13 +174,20 @@
         </div>
 
         <div class="field">
-          <label for="r-image-url">OR IMAGE URL <span class="optional">(OPTIONAL)</span></label>
-          <input id="r-image-url" name="imageUrl" type="url" placeholder="https://..." />
-          <small class="hint">Upload wins if both are provided.</small>
+          <label for="r-drive-link">GOOGLE DRIVE LINK <span class="optional">(OPTIONAL)</span></label>
+          <input id="r-drive-link" name="driveLink" type="url" placeholder="https://drive.google.com/file/d/.../view or /drive/folders/..." />
+          <small class="error-text" data-error="driveLink"></small>
+          <small class="hint">Used if no file is uploaded. Share the file or folder with “Anyone with the link”. Folder links open as a folder view.</small>
         </div>
 
         <div class="image-preview-wrap" id="image-preview-wrap" hidden>
           <img id="image-preview" alt="Selected item preview" />
+          <div class="image-folder-note" id="image-folder-note" role="img" aria-label="Drive folder" title="Drive folder" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 6.5h6l2 2h10v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+              <path d="M3 9.5h18" />
+            </svg>
+          </div>
           <button class="btn btn-outline btn-xs" type="button" id="clear-image">REMOVE IMAGE</button>
         </div>
 

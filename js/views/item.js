@@ -48,7 +48,7 @@ function detailMarkup(item) {
     </div>` : '';
 
   return `
-    <div class="detail-media">${imageMarkup(item.imageUrl, (item.category || '?').slice(0, 1).toUpperCase())}</div>
+    <div class="detail-media">${imageMarkup(item.imageUrl, (item.category || '?').slice(0, 1).toUpperCase(), { expandable: true })}</div>
     <div class="card-meta">
       ${typeBadge(item.type)}
       ${statusBadge(status)}

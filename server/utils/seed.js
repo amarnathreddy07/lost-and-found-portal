@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
@@ -9,50 +8,34 @@ const { connectDB } = require('../config/db');
 const { departmentFromEmail } = require('../config/accounts');
 const User = require('../models/User');
 
-const SAMPLE_USERS = [
-  { key: 'admin', name: 'Campus Admin', email: 'campusadmin.a-29@admin.saiuniversity.edu.in', role: 'admin', studentId: 'ADMIN-001', phone: '+91 90000 00001' },
-  { key: 'arjun', name: 'Arjun Mehta', email: 'arjunmehta.a-21@scds.saiuniversity.edu.in', role: 'user', studentId: 'SAI-21CS-014', phone: '+91 90000 00002' },
-  { key: 'meera', name: 'Meera Iyer', email: 'meeraiyer.m-22@ece.saiuniversity.edu.in', role: 'user', studentId: 'SAI-22EC-031', phone: '+91 90000 00003' },
-  { key: 'kabir', name: 'Kabir Shah', email: 'kabirshah.k-20@me.saiuniversity.edu.in', role: 'user', studentId: 'SAI-20ME-008', phone: '+91 90000 00004' },
-  { key: 'diya', name: 'Diya Nair', email: 'diyanair.d-23@llb.saiuniversity.edu.in', role: 'user', studentId: 'SAI-23LLB-045', phone: '+91 90000 00005' }
-];
-
-function passwordFor(user, allowAdmin) {
-  if (user.role === 'admin') {
-    return allowAdmin ? (process.env.ADMIN_PASSWORD || '') : '';
-  }
-  return process.env.SEED_STUDENT_PASSWORD || crypto.randomBytes(18).toString('hex');
+function nameFromEmail(email) {
+  const raw = String(email).split('@')[0].split('.')[0].replace(/[^A-Za-z0-9]+/g, ' ').trim();
+  return raw ? raw.replace(/\b\w/g, (letter) => letter.toUpperCase()).slice(0, 80) : 'Campus Admin';
 }
 
-async function seedDatabase({ allowAdmin = process.env.NODE_ENV !== 'production' } = {}) {
-  const userMap = {};
+async function seedDatabase({ allowAdmin = Boolean(process.env.ADMIN_PASSWORD) } = {}) {
+  const email = String(process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  if (!allowAdmin || !email || !process.env.ADMIN_PASSWORD) return { users: 0 };
 
-  for (const profile of SAMPLE_USERS) {
-    if (profile.role === 'admin' && !allowAdmin) continue;
-
-    const email = profile.role === 'admin'
-      ? (process.env.ADMIN_EMAIL || profile.email).toLowerCase().trim()
-      : profile.email;
-    const password = passwordFor(profile, allowAdmin);
-
-    let record = await User.findOne({ email });
-    if (!record) {
-      if (!password) continue;
-      const { key, ...fields } = profile;
-      record = await User.create({
-        ...fields,
-        email,
-        department: departmentFromEmail(email),
-        password: await bcrypt.hash(password, 12)
-      });
-    } else if (record.department !== departmentFromEmail(email)) {
-      record.department = departmentFromEmail(email);
-      await record.save();
+  const existing = await User.findOne({ email });
+  if (existing) {
+    const department = departmentFromEmail(email);
+    if (existing.department !== department) {
+      existing.department = department;
+      await existing.save();
     }
-    userMap[profile.key] = record;
+    return { users: 1 };
   }
 
-  return { users: Object.keys(userMap).length };
+  await User.create({
+    name: nameFromEmail(email),
+    email,
+    department: departmentFromEmail(email),
+    password: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
+    role: 'admin'
+  });
+
+  return { users: 1 };
 }
 
 if (require.main === module) {
@@ -70,4 +53,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { seedDatabase, SAMPLE_USERS };
+module.exports = { seedDatabase };

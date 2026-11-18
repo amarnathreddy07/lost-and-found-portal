@@ -79,13 +79,16 @@ exports.createUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Use name.initial-YY@department.saiuniversity.edu.in.');
   }
 
+  const studentId = String(req.body.studentId || '').trim();
+  if (!studentId) throw new ApiError(400, 'PRN is required.');
+
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, 'An account with this email already exists.');
 
   const user = await User.create({
     name: String(req.body.name || '').trim().slice(0, 80) || nameFromEmail(email),
     email,
-    studentId: String(req.body.studentId || '').trim().slice(0, 30),
+    studentId: studentId.slice(0, 30),
     department: String(req.body.department || '').trim().slice(0, 40) || departmentFromEmail(email),
     phone: String(req.body.phone || '').trim().slice(0, 20),
     password: await bcrypt.hash(DEFAULT_USER_PASSWORD, 12),
@@ -106,6 +109,43 @@ exports.createUser = asyncHandler(async (req, res) => {
       phone: user.phone,
       role: user.role,
       mustChangePassword: true
+    }
+  });
+});
+
+exports.updateUser = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || '').toLowerCase().trim();
+  if (!UNIVERSITY_EMAIL_PATTERN.test(email)) {
+    throw new ApiError(400, 'Use name.initial-YY@department.saiuniversity.edu.in.');
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) throw new ApiError(404, 'User not found.');
+
+  const duplicate = await User.findOne({ email });
+  if (duplicate && duplicate._id.toString() !== user.id) {
+    throw new ApiError(409, 'An account with this email already exists.');
+  }
+
+  user.name = String(req.body.name || '').trim().slice(0, 80);
+  user.email = email;
+  user.studentId = String(req.body.studentId || '').trim().slice(0, 30);
+  user.department = String(req.body.department || '').trim().slice(0, 40) || departmentFromEmail(email);
+  user.phone = String(req.body.phone || '').trim().slice(0, 20);
+  await user.save();
+
+  res.json({
+    success: true,
+    message: `${user.name}'s details updated.`,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      studentId: user.studentId,
+      department: user.department,
+      phone: user.phone,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword
     }
   });
 });

@@ -5,6 +5,7 @@ const Claim = require('../models/Claim');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 const { uploadDir } = require('../config/upload');
+const { normalizeImageUrl } = require('../utils/imageUrl');
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -40,8 +41,7 @@ const sortOptions = {
 
 function imageUrlFor(req) {
   if (req.file) return `/uploads/${req.file.filename}`;
-  if (req.body.imageUrl) return String(req.body.imageUrl).trim();
-  return '';
+  return normalizeImageUrl(req.body.driveLink || req.body.imageUrl);
 }
 
 async function deleteUploadedFile(url) {

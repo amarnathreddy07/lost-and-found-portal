@@ -12,19 +12,62 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+export function driveFolderId(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^https?:\/\/(?:drive|docs)\.google\.com\/(?:drive\/(?:u\/\d+\/)?folders\/|folderview\?id=|open\?[^#\s]*id=)([\w-]{10,})/i);
+  return match ? match[1] : '';
+}
+
+export function normalizeImageUrl(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const folderId = driveFolderId(text);
+  if (folderId) return `https://drive.google.com/drive/folders/${folderId}`;
+  if (/^https?:\/\/(?:drive|docs)\.google\.com\/thumbnail\?/i.test(text)) return text;
+  const match = text.match(/^https?:\/\/(?:drive|docs)\.google\.com\/(?:file\/d\/|file\/u\/\d+\/d\/|open\?[^#\s]*id=|uc\?[^#\s]*id=)([\w-]{10,})/i);
+  if (!match) return text;
+  return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+}
+
 export function safeImage(url) {
-  const value = String(url || '').trim();
+  const value = normalizeImageUrl(url);
   if (!value) return '';
   if (/^\/uploads\/[\w.-]+$/.test(value)) return value;
   if (/^https?:\/\/[^\s"'<>]+$/i.test(value)) return value;
   return '';
 }
 
-export function imageMarkup(url, placeholder = '?') {
+export function imageMarkup(url, placeholder = '?', { expandable = false } = {}) {
+  const folderId = driveFolderId(url);
+  if (folderId) {
+    const expand = expandable
+      ? `<button class="media-expand" type="button" data-drive-folder="${escapeHtml(folderId)}" aria-label="View Drive folder" title="View Drive folder">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+          </svg>
+        </button>`
+      : '';
+    const hint = expandable ? '<span class="media-folder-hint">VIEW FOLDER</span>' : '';
+    return `<div class="media-placeholder media-folder" role="img" aria-label="Drive folder">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3 6.5h6l2 2h10v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+        <path d="M3 9.5h18" />
+      </svg>
+    </div>${hint}${expand}`;
+  }
   const safe = safeImage(url);
   if (!safe) return `<div class="media-placeholder">${escapeHtml(placeholder)}</div>`;
-  return `<img src="${escapeHtml(assetUrl(safe))}" alt="Reported item" loading="lazy" />
-    <div class="media-placeholder" hidden>${escapeHtml(placeholder)}</div>`;
+  const src = assetUrl(safe);
+  const expand = expandable
+    ? `<button class="media-expand" type="button" data-expand-image="${escapeHtml(src)}" aria-label="Expand image" title="Expand image">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+        </svg>
+      </button>`
+    : '';
+  return `<img src="${escapeHtml(src)}" alt="Reported item" loading="lazy" />
+    <div class="media-placeholder" hidden>${escapeHtml(placeholder)}</div>
+    ${expand}`;
 }
 
 export function formatDate(value) {
@@ -182,6 +225,38 @@ export function openModal({ title = 'DETAILS', body = '', wide = false, dismissi
     }
   };
 }
+
+document.addEventListener('click', (event) => {
+  const folderButton = event.target.closest('[data-drive-folder]');
+  if (folderButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const folderId = folderButton.dataset.driveFolder;
+    if (!folderId) return;
+    const modal = openModal({
+      title: 'DRIVE FOLDER',
+      wide: true,
+      body: `<iframe class="drive-folder-frame" src="https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid" title="Google Drive folder" loading="lazy" allowfullscreen></iframe>`
+    });
+    modal.overlay.classList.add('image-lightbox-overlay');
+    modal.dialog.classList.add('image-lightbox', 'drive-folder-lightbox');
+    return;
+  }
+
+  const button = event.target.closest('[data-expand-image]');
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const src = button.dataset.expandImage;
+  if (!src) return;
+  const modal = openModal({
+    title: 'IMAGE PREVIEW',
+    wide: true,
+    body: `<img class="lightbox-image" src="${escapeHtml(src)}" alt="Expanded reported item" />`
+  });
+  modal.overlay.classList.add('image-lightbox-overlay');
+  modal.dialog.classList.add('image-lightbox');
+});
 
 export function closeModal() {
   const top = modalStack[modalStack.length - 1];

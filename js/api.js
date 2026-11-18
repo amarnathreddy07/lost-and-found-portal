@@ -1,5 +1,7 @@
 const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/me', '/auth/change-password'];
-const API_BASE = String(document.querySelector('meta[name="api-base"]')?.getAttribute('content') || '').replace(/\/$/, '');
+const configuredBase = String(document.querySelector('meta[name="api-base"]')?.getAttribute('content') || '').replace(/\/$/, '');
+const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(window.location.hostname);
+const API_BASE = isLocalHost ? '' : configuredBase;
 
 export function assetUrl(path) {
   const value = String(path || '');
@@ -103,6 +105,7 @@ export const api = {
     users: () => request('/admin/users'),
     preloadedUsers: () => request('/admin/users/preloaded'),
     createUser: (payload) => request('/admin/users', { method: 'POST', body: payload }),
+    updateUser: (id, payload) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: payload }),
     importUsers: (file) => {
       const formData = new FormData();
       formData.append('file', file);

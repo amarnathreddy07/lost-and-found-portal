@@ -37,7 +37,7 @@ exports.register = asyncHandler(async (req, res) => {
     name,
     email: normalizedEmail,
     password: await bcrypt.hash(password, 12),
-    studentId: studentId || '',
+    studentId: String(studentId || '').trim(),
     department: departmentFromEmail(normalizedEmail),
     phone: phone || '',
     role: 'user'
