@@ -84,6 +84,8 @@ function usersTable(users) {
       <tbody>${users.map((user) => {
         const id = escapeHtml(user._id);
         const isSelf = user._id === getUser()?.id;
+        const isPrimary = Boolean(user.isPrimaryAdmin);
+        const locked = isSelf || isPrimary;
         const meta = studentMeta(user.email);
         return `
         <tr>
@@ -92,18 +94,18 @@ function usersTable(users) {
           <td>${meta.gradYear || '—'}</td>
           <td>${escapeHtml(user.studentId || '—')}${meta.department ? `<br /><span class="mono-note">${escapeHtml(meta.department)}</span>` : ''}</td>
           <td>
-            <select data-role-for="${id}" aria-label="Role for ${escapeHtml(user.name)}" ${isSelf ? 'disabled' : ''}>
+            <select data-role-for="${id}" aria-label="Role for ${escapeHtml(user.name)}" ${locked ? 'disabled' : ''} ${isPrimary ? 'title="The campus admin role is locked"' : ''}>
               <option value="user" ${user.role === 'user' ? 'selected' : ''}>USER</option>
               <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>ADMIN</option>
             </select>
-            ${user.role === 'admin' ? '<span class="badge badge-admin">ADMIN</span>' : ''}
+            ${isPrimary ? '<span class="badge badge-pending">CAMPUS ADMIN</span>' : user.role === 'admin' ? '<span class="badge badge-admin">ADMIN</span>' : ''}
           </td>
           <td>${user.mustChangePassword ? '<span class="badge badge-pending">CHANGE REQUIRED</span>' : '<span class="badge badge-active">READY</span>'}</td>
           <td>${formatDate(user.createdAt)}</td>
           <td><div class="row-actions">
             <button class="btn btn-xs" type="button" data-aaction="edit-user" data-id="${id}">EDIT</button>
             <button class="btn btn-xs" type="button" data-aaction="reset-password" data-id="${id}" data-name="${escapeHtml(user.name)}">RESET PASSWORD</button>
-            <button class="btn btn-xs btn-danger" type="button" data-aaction="delete-user" data-id="${id}" ${isSelf ? 'disabled' : ''}>DELETE USER</button>
+            <button class="btn btn-xs btn-danger" type="button" data-aaction="delete-user" data-id="${id}" ${locked ? 'disabled' : ''} ${isPrimary ? 'title="The campus admin account cannot be deleted"' : ''}>DELETE USER</button>
           </div></td>
         </tr>`;
       }).join('')}</tbody>

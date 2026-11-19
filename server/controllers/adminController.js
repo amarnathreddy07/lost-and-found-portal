@@ -8,7 +8,7 @@ const Claim = require('../models/Claim');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 const { uploadDir } = require('../config/upload');
-const { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail } = require('../config/accounts');
+const { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail, isPrimaryAdmin } = require('../config/accounts');
 const { parseUserCsv } = require('../utils/csv');
 
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).+$/;
@@ -54,7 +54,10 @@ exports.items = asyncHandler(async (req, res) => {
 
 exports.users = asyncHandler(async (_req, res) => {
   const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
-  res.json({ success: true, users });
+  res.json({
+    success: true,
+    users: users.map((user) => ({ ...user, isPrimaryAdmin: isPrimaryAdmin(user) }))
+  });
 });
 
 exports.preloadedUsers = asyncHandler(async (_req, res) => {
@@ -234,19 +237,21 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 
 exports.updateRole = asyncHandler(async (req, res) => {
   if (req.params.id === req.user.id) throw new ApiError(400, 'You cannot change your own role.');
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    { $set: { role: req.body.role }, $inc: { tokenVersion: 1 } },
-    { new: true, runValidators: true }
-  ).select('-password');
+  const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found.');
+  if (isPrimaryAdmin(user)) throw new ApiError(400, 'The campus admin role cannot be changed.');
+  user.role = req.body.role;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
   res.json({ success: true, message: `${user.name} is now a ${user.role}.`, user });
 });
 
 exports.removeUser = asyncHandler(async (req, res) => {
   if (req.params.id === req.user.id) throw new ApiError(400, 'You cannot delete your own account.');
-  const user = await User.findByIdAndDelete(req.params.id);
+  const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found.');
+  if (isPrimaryAdmin(user)) throw new ApiError(400, 'The campus admin account cannot be deleted.');
+  await User.findByIdAndDelete(req.params.id);
 
   const items = await Item.find({ reportedBy: user._id }).select('imageUrl').lean();
   const itemIds = items.map((item) => item._id);

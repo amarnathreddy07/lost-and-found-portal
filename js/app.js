@@ -19,6 +19,15 @@ const VIEW_TITLES = {
 };
 let filterTimer;
 
+function setNavOpen(open) {
+  const header = $('.site-header');
+  const toggle = $('#nav-toggle');
+  if (!header || !toggle) return;
+  header.classList.toggle('nav-open', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+}
+
 function updateHeader() {
   const user = getUser();
   $('#user-chip').hidden = !user;
@@ -50,6 +59,7 @@ function navigate(view, { replace = false, dashboardTab } = {}) {
   }
 
   state.currentView = target;
+  setNavOpen(false);
   if (dashboardTab) {
     state.dashboardTab = dashboardTab;
     $$('[data-dtab]').forEach((tab) => {
@@ -129,6 +139,7 @@ function initFilters() {
 function bindGlobalEvents() {
   document.addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return;
+    if (!event.target.closest('.site-header')) setNavOpen(false);
     const nav = event.target.closest('[data-nav]');
     if (nav) {
       event.preventDefault();
@@ -136,6 +147,14 @@ function bindGlobalEvents() {
       return;
     }
     if (event.target.closest('#auth-open')) emit('openAuth', { mode: 'login' });
+  });
+
+  $('#nav-toggle')?.addEventListener('click', () => {
+    setNavOpen(!$('.site-header')?.classList.contains('nav-open'));
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setNavOpen(false);
   });
 
   $('#logout-btn').addEventListener('click', logout);

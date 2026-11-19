@@ -34,4 +34,10 @@ function findPreloadedUser(email) {
   return PRELOADED_USERS.find((entry) => entry.email === normalized) || null;
 }
 
-module.exports = { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail, findPreloadedUser };
+function isPrimaryAdmin(user) {
+  const primaryEmail = String(process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  const email = String(user?.email || '').toLowerCase().trim();
+  return Boolean(primaryEmail && email === primaryEmail);
+}
+
+module.exports = { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, departmentFromEmail, findPreloadedUser, isPrimaryAdmin };

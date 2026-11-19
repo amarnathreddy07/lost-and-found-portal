@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#F4F3EE" />
   <meta name="description" content="Campus Lost and Found Portal for Sai University — report, search and claim campus items." />
   <meta name="api-base" content="https://lost-and-found-portal-uxit.onrender.com" />
@@ -35,7 +35,7 @@
         </span>
       </a>
 
-      <nav class="main-nav" aria-label="Primary navigation">
+      <nav id="primary-nav" class="main-nav" aria-label="Primary navigation">
         <button class="nav-btn" type="button" data-nav="home">BOARD</button>
         <button class="nav-btn" type="button" data-nav="report">REPORT</button>
         <button class="nav-btn" type="button" data-nav="dashboard">MY SPACE</button>
@@ -53,6 +53,11 @@
         <button id="auth-open" class="btn btn-dark btn-sm" type="button">SIGN IN</button>
         <button id="logout-btn" class="btn btn-outline btn-sm" type="button" hidden>LOG OUT</button>
       </div>
+
+      <button id="nav-toggle" class="nav-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-nav">
+        <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="nav-toggle-label">MENU</span>
+      </button>
     </div>
 
     <div class="toolbar" aria-label="Campus board filters">
@@ -93,7 +98,7 @@
       <div class="hero">
         <div class="hero-copy">
           <span class="tag tag-pending">LIVE CAMPUS BOARD</span>
-          <h1 id="home-title">LOST SOMETHING?<br /><span class="highlight">FIND IT HERE.</span></h1>
+          <h1 id="home-title"><span class="hero-line">LOST SOMETHING?</span><br /><span class="highlight">FIND IT HERE.</span></h1>
           <p>The official Sai University noticeboard for everything left behind. Scan fast, claim safely, reunite faster.</p>
           <div class="hero-actions">
             <button class="btn btn-accent" type="button" data-nav="report">+ REPORT AN ITEM</button>
