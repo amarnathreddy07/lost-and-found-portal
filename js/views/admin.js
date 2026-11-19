@@ -112,6 +112,33 @@ function usersTable(users) {
     </table></div>`;
 }
 
+function resetsTable(requests) {
+  if (!requests.length) return '<div class="inline-notice">NO PASSWORD RESET REQUESTS FOUND.</div>';
+  return `
+    <div class="table-wrap"><table>
+      <thead><tr><th>USER</th><th>EMAIL</th><th>PRN</th><th>MESSAGE</th><th>REQUESTED</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+      <tbody>${requests.map((request) => {
+        const id = escapeHtml(request.id);
+        const status = request.status;
+        const tagClass = status === 'resolved' ? 'tag-found' : status === 'rejected' ? 'tag-lost' : 'tag-pending';
+        return `
+        <tr>
+          <td><strong>${escapeHtml(request.user.name)}</strong></td>
+          <td>${escapeHtml(request.user.email)}</td>
+          <td>${escapeHtml(request.user.studentId || '—')}</td>
+          <td>${escapeHtml(truncate(request.note, 80) || '—')}</td>
+          <td>${formatDate(request.createdAt)}</td>
+          <td><span class="tag ${tagClass}">${escapeHtml(status.toUpperCase())}</span></td>
+          <td>${status === 'pending' ? `
+            <div class="row-actions">
+              <button class="btn btn-xs btn-accent" type="button" data-aaction="resolve-reset" data-id="${id}" data-name="${escapeHtml(request.user.name)}">RESET &amp; RESOLVE</button>
+              <button class="btn btn-xs btn-danger" type="button" data-aaction="reject-reset" data-id="${id}">REJECT</button>
+            </div>` : '<span class="mono-note">HANDLED</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+}
+
 function syncUserFilters(users) {
   const yearSelect = $('#admin-grad-year');
   const departmentSelect = $('#admin-department');
@@ -647,6 +674,54 @@ export function initAdmin() {
       return;
     }
 
+    if (aaction === 'resolve-reset') {
+      const name = button.dataset.name || 'this user';
+      const confirmed = await confirmAction({
+        title: 'RESET PASSWORD?',
+        message: `Generate a temporary password for ${name} and close this ticket? Their current session will end.`,
+        confirmLabel: 'YES, RESET'
+      });
+      if (!confirmed) return;
+      setLoading(button, true);
+      try {
+        const response = await api.admin.resolveResetRequest(id, 'resolved');
+        const result = openModal({
+          title: `PASSWORD RESET — ${name}`,
+          body: `<div class="password-result">
+            <p class="hint">Temporary password for <strong>${escapeHtml(name)}</strong>:</p>
+            <code class="inline-code">${escapeHtml(response.temporaryPassword)}</code>
+            <p class="hint">Share it securely. It will not be shown again.</p>
+          </div>
+          <div class="modal-actions"><button class="btn btn-accent" type="button" data-done>DONE</button></div>`
+        });
+        $('[data-done]', result.body).addEventListener('click', () => { result.close(); renderAdmin(); });
+        toast(response.message, 'success');
+      } catch (error) {
+        toast(error.message, 'error');
+        setLoading(button, false);
+      }
+      return;
+    }
+
+    if (aaction === 'reject-reset') {
+      const confirmed = await confirmAction({
+        title: 'REJECT REQUEST?',
+        message: 'This closes the ticket without changing the password.',
+        confirmLabel: 'YES, REJECT'
+      });
+      if (!confirmed) return;
+      setLoading(button, true);
+      try {
+        const response = await api.admin.resolveResetRequest(id, 'rejected');
+        toast(response.message, 'success');
+        renderAdmin();
+      } catch (error) {
+        toast(error.message, 'error');
+        setLoading(button, false);
+      }
+      return;
+    }
+
     if (aaction === 'delete-user') {
       const confirmed = await confirmAction({ title: 'DELETE USER?', message: 'Their listings and claims will also be removed.', confirmLabel: 'YES, DELETE' });
       if (!confirmed) return;
@@ -678,6 +753,7 @@ export async function renderAdmin() {
   statsBox.innerHTML = '<p class="mono-note">LOADING STATS...</p>';
   panel.innerHTML = '<p class="mono-note">LOADING MODERATION DATA...</p>';
 
+  let resetTicketsAvailable = true;
   try {
     const [statsResponse, dataResponse] = await Promise.all([
       api.admin.stats(),
@@ -685,7 +761,15 @@ export async function renderAdmin() {
         ? api.admin.items()
         : state.adminTab === 'claims'
           ? api.claims.all()
-          : api.admin.users()
+          : state.adminTab === 'resets'
+            ? api.admin.resetRequests().catch((error) => {
+              if (error.status === 404) {
+                resetTicketsAvailable = false;
+                return { requests: [] };
+              }
+              throw error;
+            })
+            : api.admin.users()
     ]);
     if (seq !== state.adminSeq) return false;
 
@@ -694,6 +778,9 @@ export async function renderAdmin() {
     if (filterBar) filterBar.hidden = state.adminTab !== 'users';
     if (state.adminTab === 'items') panel.innerHTML = itemsTable(dataResponse.items || []);
     else if (state.adminTab === 'claims') panel.innerHTML = claimsTable(dataResponse.claims || []);
+    else if (state.adminTab === 'resets') panel.innerHTML = resetTicketsAvailable
+      ? resetsTable(dataResponse.requests || [])
+      : '<div class="inline-notice">PASSWORD TICKET ENDPOINT IS NOT AVAILABLE ON THIS SERVER YET.</div>';
     else panel.innerHTML = usersTable(syncUserFilters(dataResponse.users || []));
     return true;
   } catch (error) {

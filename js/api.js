@@ -79,6 +79,9 @@ export const api = {
     register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
     login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
     me: () => request('/auth/me'),
+    updateProfile: (payload) => request('/auth/profile', { method: 'PATCH', body: payload }),
+    createResetRequest: (note) => request('/auth/reset-request', { method: 'POST', body: note ? { note } : {} }),
+    myResetRequest: () => request('/auth/reset-request/mine'),
     changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
     logout: () => request('/auth/logout', { method: 'POST' })
   },
@@ -116,6 +119,11 @@ export const api = {
       body: password ? { password } : {}
     }),
     setRole: (id, role) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'PATCH', body: { role } }),
-    removeUser: (id) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    removeUser: (id) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    resetRequests: () => request('/admin/reset-requests'),
+    resolveResetRequest: (id, status) => request(`/admin/reset-requests/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: { status }
+    })
   }
 };

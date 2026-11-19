@@ -24,6 +24,7 @@ export const state = {
   listSeq: 0,
   dashboardSeq: 0,
   adminSeq: 0,
+  profileSeq: 0,
   filters: {
     q: '',
     type: '',

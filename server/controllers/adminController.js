@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Item = require('../models/Item');
 const Claim = require('../models/Claim');
+const ResetRequest = require('../models/ResetRequest');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 const { uploadDir } = require('../config/upload');
@@ -257,6 +258,7 @@ exports.removeUser = asyncHandler(async (req, res) => {
   const itemIds = items.map((item) => item._id);
   await Claim.deleteMany({ $or: [{ item: { $in: itemIds } }, { claimant: user._id }] });
   await Claim.updateMany({ reviewedBy: user._id }, { $unset: { reviewedBy: '' } });
+  await ResetRequest.deleteMany({ user: user._id });
   await Item.deleteMany({ reportedBy: user._id });
 
   for (const item of items) {
@@ -266,4 +268,62 @@ exports.removeUser = asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, message: 'User and related records deleted.' });
+});
+
+exports.resetRequests = asyncHandler(async (_req, res) => {
+  const requests = await ResetRequest.find()
+    .populate('user', 'name email studentId department')
+    .sort({ status: 1, createdAt: -1 });
+
+  res.json({
+    success: true,
+    requests: requests.filter((request) => request.user).map((request) => ({
+      id: request._id.toString(),
+      status: request.status,
+      note: request.note || '',
+      createdAt: request.createdAt,
+      resolvedAt: request.resolvedAt,
+      user: {
+        id: request.user._id.toString(),
+        name: request.user.name,
+        email: request.user.email,
+        studentId: request.user.studentId,
+        department: request.user.department
+      }
+    }))
+  });
+});
+
+exports.resolveResetRequest = asyncHandler(async (req, res) => {
+  const request = await ResetRequest.findById(req.params.id);
+  if (!request) throw new ApiError(404, 'Reset request not found.');
+  if (request.status !== 'pending') throw new ApiError(400, 'This request has already been handled.');
+
+  request.resolvedAt = new Date();
+  request.resolvedBy = req.user.id;
+
+  if (req.body.status === 'rejected') {
+    request.status = 'rejected';
+    await request.save();
+    res.json({ success: true, message: 'Password reset request rejected.' });
+    return;
+  }
+
+  const user = await User.findById(request.user);
+  if (!user) throw new ApiError(404, 'The user no longer exists.');
+
+  const temporaryPassword = `Sai-${crypto.randomBytes(5).toString('hex')}-A1`;
+  user.password = await bcrypt.hash(temporaryPassword, 12);
+  user.mustChangePassword = true;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+
+  request.status = 'resolved';
+  await request.save();
+
+  res.json({
+    success: true,
+    message: `Temporary password generated for ${user.name}.`,
+    temporaryPassword
+  });
 });

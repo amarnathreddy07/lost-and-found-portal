@@ -201,6 +201,9 @@ All endpoints are prefixed with `/api`. JSON bodies are expected unless noted. S
 | `POST` | `/register`        | —            | Register a student with a university email. |
 | `POST` | `/login`           | —            | Sign in and receive a JWT cookie.           |
 | `GET`  | `/me`              | Bearer/cookie | Get the current user profile.               |
+| `PATCH` | `/profile`         | Yes           | Update name, phone, and PRN.               |
+| `POST` | `/reset-request`   | Yes           | Raise a password reset ticket for an admin. |
+| `GET`  | `/reset-request/mine` | Yes        | Get the current user's latest reset ticket. |
 | `POST` | `/change-password` | Yes           | Change the current password.                |
 | `POST` | `/logout`          | Yes           | End the session.                            |
 
@@ -242,6 +245,8 @@ All endpoints are prefixed with `/api`. JSON bodies are expected unless noted. S
 | `POST`   | `/users/:id/reset-password` | Reset a user's password.                   |
 | `PATCH`  | `/users/:id/role`           | Change a user's role.                      |
 | `DELETE` | `/users/:id`                | Delete a user and related records.         |
+| `GET`    | `/reset-requests`           | List password reset tickets.               |
+| `PATCH`  | `/reset-requests/:id`       | Resolve or reject a reset ticket.          |
 
 ---
 
@@ -250,6 +255,7 @@ All endpoints are prefixed with `/api`. JSON bodies are expected unless noted. S
 - **User** — name, email, studentId (PRN), department, phone, hashed password, role (`user`/`admin`), `mustChangePassword`, `tokenVersion`.
 - **Item** — title, type (`lost`/`found`), category, description, location, date, imageUrl, status (`active`/`claimed`/`resolved`/`archived`), reportedBy, timestamps. Text indexes power search.
 - **Claim** — item, claimant, proof, status (`pending`/`approved`/`rejected`), reviewedAt, reviewedBy, timestamps. One claim per user per item; approving a claim rejects others and marks the item as claimed.
+- **ResetRequest** — user, status (`pending`/`resolved`/`rejected`), optional note, resolvedAt, resolvedBy, timestamps. Only one pending ticket per user; resolving generates a temporary password and signs out existing sessions.
 
 ---
 

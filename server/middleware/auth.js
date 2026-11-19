@@ -50,7 +50,14 @@ const protect = asyncHandler(async (req, _res, next) => {
     throw new ApiError(401, 'Your session was ended. Please sign in again.');
   }
 
-  const allowedPaths = ['/api/auth/me', '/api/auth/change-password', '/api/auth/logout'];
+  const allowedPaths = [
+    '/api/auth/me',
+    '/api/auth/change-password',
+    '/api/auth/logout',
+    '/api/auth/profile',
+    '/api/auth/reset-request',
+    '/api/auth/reset-request/mine'
+  ];
   const requestPath = req.originalUrl.split('?')[0];
   if (user.mustChangePassword && !allowedPaths.includes(requestPath)) {
     const error = new ApiError(403, 'Change your password before continuing.', [{ code: 'PASSWORD_CHANGE_REQUIRED' }]);

@@ -40,6 +40,20 @@ const changePasswordRules = [
 router.post('/register', authLimiter, registerRules, handleValidationErrors, authController.register);
 router.post('/login', authLimiter, loginRules, handleValidationErrors, authController.login);
 router.get('/me', protect, authController.me);
+
+const profileRules = [
+  body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Name must be 2-80 characters.'),
+  body('studentId').trim().notEmpty().withMessage('PRN is required.')
+    .isLength({ max: 30 }).withMessage('PRN is too long.'),
+  body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).withMessage('Phone number is too long.')
+];
+
+router.patch('/profile', protect, profileRules, handleValidationErrors, authController.updateProfile);
+router.post('/reset-request', protect, [
+  body('note').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Message is too long.')
+], handleValidationErrors, authController.createResetRequest);
+router.get('/reset-request/mine', protect, authController.myResetRequest);
+
 router.post('/change-password', protect, changePasswordRules, handleValidationErrors, authController.changePassword);
 router.post('/logout', protect, authController.logout);
 

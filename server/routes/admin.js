@@ -47,4 +47,10 @@ router.delete('/users/:id', [
   param('id').isMongoId().withMessage('Invalid user identifier.')
 ], handleValidationErrors, adminController.removeUser);
 
+router.get('/reset-requests', adminController.resetRequests);
+router.patch('/reset-requests/:id', [
+  param('id').isMongoId().withMessage('Invalid request identifier.'),
+  body('status').isIn(['resolved', 'rejected']).withMessage('Decision must be resolved or rejected.')
+], handleValidationErrors, adminController.resolveResetRequest);
+
 module.exports = router;

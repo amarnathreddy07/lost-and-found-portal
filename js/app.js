@@ -8,14 +8,16 @@ import { openItem } from './views/item.js';
 import { initReport, openReportForm } from './views/report.js';
 import { openAuth, logout, openPasswordChange } from './views/auth.js';
 import { initDashboard, renderDashboard } from './views/dashboard.js';
+import { renderProfile } from './views/profile.js';
 import { initAdmin, renderAdmin } from './views/admin.js';
 
-const VIEWS = ['home', 'report', 'dashboard', 'admin'];
+const VIEWS = ['home', 'report', 'dashboard', 'admin', 'profile'];
 const VIEW_TITLES = {
   home: 'Campus Board',
   report: 'Report an Item',
   dashboard: 'My Space',
-  admin: 'Moderation Desk'
+  admin: 'Moderation Desk',
+  profile: 'Your Profile'
 };
 let filterTimer;
 
@@ -33,12 +35,14 @@ function updateHeader() {
   $('#user-chip').hidden = !user;
   $('#auth-open').hidden = Boolean(user);
   $('#logout-btn').hidden = !user;
+  $('#profile-open').hidden = !user;
   $$('.admin-only').forEach((node) => { node.hidden = !isAdmin(); });
 
   if (user) {
     $('#user-name').textContent = user.name;
     $('#user-role').textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
     $('#user-initials').textContent = initials();
+    $('#profile-initials').textContent = initials();
   }
 }
 
@@ -46,13 +50,14 @@ function renderView(view = state.currentView) {
   if (view === 'home') renderHome();
   else if (view === 'dashboard') renderDashboard();
   else if (view === 'admin') renderAdmin();
+  else if (view === 'profile') renderProfile();
 }
 
 function navigate(view, { replace = false, dashboardTab } = {}) {
   window.clearTimeout(filterTimer);
 
   let target = VIEWS.includes(view) ? view : 'home';
-  if (['report', 'dashboard', 'admin'].includes(target) && !getUser()) {
+  if (['report', 'dashboard', 'admin', 'profile'].includes(target) && !getUser()) {
     state.pendingView = target;
     emit('openAuth', { mode: 'login' });
     target = 'home';
@@ -147,6 +152,7 @@ function bindGlobalEvents() {
       return;
     }
     if (event.target.closest('#auth-open')) emit('openAuth', { mode: 'login' });
+    if (event.target.closest('#profile-open') || event.target.closest('#user-chip')) navigate('profile');
   });
 
   $('#nav-toggle')?.addEventListener('click', () => {
@@ -186,6 +192,7 @@ function bindGlobalEvents() {
   });
 
   on('navigate', ({ view }) => navigate(view));
+  on('profileUpdated', updateHeader);
   on('refresh', () => renderView());
   on('openItem', ({ id }) => openItem(id));
   on('editItem', ({ item }) => openReportForm(item));

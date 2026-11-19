@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const ResetRequest = require('../models/ResetRequest');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../middleware/asyncHandler');
 const { signToken, cookieOptions, COOKIE_NAME } = require('../middleware/auth');
@@ -65,6 +66,50 @@ exports.login = asyncHandler(async (req, res) => {
 
 exports.me = asyncHandler(async (req, res) => {
   res.json({ success: true, user: publicUser(req.user) });
+});
+
+function requestSummary(request) {
+  return {
+    id: request._id.toString(),
+    status: request.status,
+    note: request.note || '',
+    createdAt: request.createdAt,
+    resolvedAt: request.resolvedAt
+  };
+}
+
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const { name, studentId, phone } = req.body;
+  const user = await User.findById(req.user.id);
+  if (!user) throw new ApiError(404, 'Account not found.');
+
+  user.name = name.trim();
+  user.studentId = studentId.trim();
+  user.phone = String(phone || '').trim();
+  await user.save();
+
+  res.json({ success: true, message: 'Profile details updated.', user: publicUser(user) });
+});
+
+exports.createResetRequest = asyncHandler(async (req, res) => {
+  const pending = await ResetRequest.findOne({ user: req.user.id, status: 'pending' });
+  if (pending) throw new ApiError(409, 'You already have a pending password reset request.');
+
+  const request = await ResetRequest.create({
+    user: req.user.id,
+    note: String(req.body.note || '').trim()
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Ticket raised. The campus admin will reset your password.',
+    request: requestSummary(request)
+  });
+});
+
+exports.myResetRequest = asyncHandler(async (req, res) => {
+  const request = await ResetRequest.findOne({ user: req.user.id }).sort({ createdAt: -1 });
+  res.json({ success: true, request: request ? requestSummary(request) : null });
 });
 
 exports.changePassword = asyncHandler(async (req, res) => {

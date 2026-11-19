@@ -248,6 +248,16 @@ p {
   gap: 8px;
 }
 
+.profile-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .nav-toggle {
   display: none;
   align-items: center;
@@ -303,6 +313,16 @@ p {
   background: var(--paper);
   box-shadow: var(--shadow-sm);
   padding: 4px 8px 4px 4px;
+  text-align: left;
+}
+
+.user-chip:hover {
+  background: var(--pending);
+}
+
+.user-chip:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
 }
 
 .avatar {
@@ -1344,6 +1364,37 @@ td .btn {
   text-transform: uppercase;
 }
 
+.detail-grid strong {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: var(--border);
+}
+
+.profile-header h2 {
+  margin: 0 0 6px;
+}
+
+.profile-header .tag {
+  margin-right: 6px;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
 .claim-box {
   border: var(--border);
   background: var(--canvas);
@@ -1593,23 +1644,45 @@ td .btn {
 /* Phones and small tablets: collapsible navigation */
 @media (max-width: 759px) {
   .header-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 10px;
     padding: 10px 0;
   }
 
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .profile-toggle {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .profile-toggle .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+  }
+
   .nav-toggle {
     display: inline-flex;
+    grid-column: 3;
+    grid-row: 1;
   }
 
   .main-nav {
     display: none;
-    order: 3;
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
   }
 
   .site-header.nav-open .main-nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     margin-top: 2px;
     padding-top: 10px;
@@ -1623,16 +1696,26 @@ td .btn {
   }
 
   .header-account {
-    gap: 6px;
+    display: none;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    gap: 8px;
+  }
+
+  .site-header.nav-open .header-account {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .header-account .btn {
     min-height: 44px;
+    width: 100%;
     padding-inline: 12px;
   }
 
   .user-chip {
-    padding: 3px 6px 3px 3px;
+    display: none;
   }
 
   .avatar {
@@ -1704,10 +1787,6 @@ td .btn {
   .brand-copy small,
   .nav-toggle-label {
     display: none;
-  }
-
-  .site-header.nav-open .main-nav {
-    grid-template-columns: 1fr;
   }
 }
 
