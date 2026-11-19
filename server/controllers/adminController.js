@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Item = require('../models/Item');
@@ -13,6 +12,14 @@ const { DEFAULT_USER_PASSWORD, UNIVERSITY_EMAIL_PATTERN, PRELOADED_USERS, depart
 const { parseUserCsv } = require('../utils/csv');
 
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+
+function formattedTemporaryPassword(user) {
+  const namePart = String(user.name || 'user').trim().split(/\s+/)[0]
+    .toLowerCase().replace(/[^a-z]/g, '') || 'user';
+  const digits = String(user.studentId || '').replace(/\D/g, '');
+  const lastThree = (digits.slice(-3) || '000').padStart(3, '0');
+  return `${namePart}@${lastThree}`;
+}
 
 exports.stats = asyncHandler(async (_req, res) => {
   const [totalItems, activeLost, activeFound, claimedItems, resolvedItems, totalUsers, pendingClaims] =
@@ -226,7 +233,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   if (!user) throw new ApiError(404, 'User not found.');
 
   const supplied = String(req.body.password || '').trim();
-  const temporaryPassword = supplied || `Sai-${crypto.randomBytes(5).toString('hex')}-A1`;
+  const temporaryPassword = supplied || formattedTemporaryPassword(user);
 
   user.password = await bcrypt.hash(temporaryPassword, 12);
   user.mustChangePassword = true;
@@ -312,7 +319,8 @@ exports.resolveResetRequest = asyncHandler(async (req, res) => {
   const user = await User.findById(request.user);
   if (!user) throw new ApiError(404, 'The user no longer exists.');
 
-  const temporaryPassword = `Sai-${crypto.randomBytes(5).toString('hex')}-A1`;
+  const supplied = String(req.body.password || '').trim();
+  const temporaryPassword = supplied || formattedTemporaryPassword(user);
   user.password = await bcrypt.hash(temporaryPassword, 12);
   user.mustChangePassword = true;
   user.tokenVersion = (user.tokenVersion || 0) + 1;

@@ -50,7 +50,10 @@ router.delete('/users/:id', [
 router.get('/reset-requests', adminController.resetRequests);
 router.patch('/reset-requests/:id', [
   param('id').isMongoId().withMessage('Invalid request identifier.'),
-  body('status').isIn(['resolved', 'rejected']).withMessage('Decision must be resolved or rejected.')
+  body('status').isIn(['resolved', 'rejected']).withMessage('Decision must be resolved or rejected.'),
+  body('password').optional({ checkFalsy: true })
+    .isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters.')
+    .matches(/^(?=.*[A-Za-z])(?=.*\d).+$/).withMessage('Temporary password must include a letter and a number.')
 ], handleValidationErrors, adminController.resolveResetRequest);
 
 module.exports = router;

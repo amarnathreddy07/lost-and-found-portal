@@ -114,16 +114,18 @@ export const api = {
       formData.append('file', file);
       return request('/admin/users/import', { method: 'POST', body: formData });
     },
-    resetPassword: (id, password) => request(`/admin/users/${encodeURIComponent(id)}/reset-password`, {
+    resetPassword: (id, password, mode = 'custom') => request(`/admin/users/${encodeURIComponent(id)}/reset-password`, {
       method: 'POST',
-      body: password ? { password } : {}
+      body: password ? { password, mode } : { mode: 'format' }
     }),
     setRole: (id, role) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'PATCH', body: { role } }),
     removeUser: (id) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     resetRequests: () => request('/admin/reset-requests'),
-    resolveResetRequest: (id, status) => request(`/admin/reset-requests/${encodeURIComponent(id)}`, {
+    resolveResetRequest: (id, status, password, mode = 'custom') => request(`/admin/reset-requests/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      body: { status }
+      body: status === 'resolved'
+        ? password ? { status, password, mode } : { status, mode: 'format' }
+        : { status }
     })
   }
 };

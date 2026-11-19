@@ -10,6 +10,14 @@ import {
 let adminGradYear = '';
 let adminDepartment = '';
 
+function formatTempPassword(name, prn) {
+  const namePart = String(name || 'user').trim().split(/\s+/)[0]
+    .toLowerCase().replace(/[^a-z]/g, '') || 'user';
+  const digits = String(prn || '').replace(/\D/g, '');
+  const lastThree = (digits.slice(-3) || '000').padStart(3, '0');
+  return `${namePart}@${lastThree}`;
+}
+
 function statsMarkup(stats) {
   const cards = [
     ['TOTAL ITEMS', stats.totalItems],
@@ -104,7 +112,7 @@ function usersTable(users) {
           <td>${formatDate(user.createdAt)}</td>
           <td><div class="row-actions">
             <button class="btn btn-xs" type="button" data-aaction="edit-user" data-id="${id}">EDIT</button>
-            <button class="btn btn-xs" type="button" data-aaction="reset-password" data-id="${id}" data-name="${escapeHtml(user.name)}">RESET PASSWORD</button>
+            <button class="btn btn-xs" type="button" data-aaction="reset-password" data-id="${id}" data-name="${escapeHtml(user.name)}" data-prn="${escapeHtml(user.studentId || '')}">RESET PASSWORD</button>
             <button class="btn btn-xs btn-danger" type="button" data-aaction="delete-user" data-id="${id}" ${locked ? 'disabled' : ''} ${isPrimary ? 'title="The campus admin account cannot be deleted"' : ''}>DELETE USER</button>
           </div></td>
         </tr>`;
@@ -131,7 +139,7 @@ function resetsTable(requests) {
           <td><span class="tag ${tagClass}">${escapeHtml(status.toUpperCase())}</span></td>
           <td>${status === 'pending' ? `
             <div class="row-actions">
-              <button class="btn btn-xs btn-accent" type="button" data-aaction="resolve-reset" data-id="${id}" data-name="${escapeHtml(request.user.name)}">RESET &amp; RESOLVE</button>
+              <button class="btn btn-xs btn-accent" type="button" data-aaction="resolve-reset" data-id="${id}" data-name="${escapeHtml(request.user.name)}" data-prn="${escapeHtml(request.user.studentId || '')}">RESET &amp; RESOLVE</button>
               <button class="btn btn-xs btn-danger" type="button" data-aaction="reject-reset" data-id="${id}">REJECT</button>
             </div>` : '<span class="mono-note">HANDLED</span>'}</td>
         </tr>`;
@@ -506,11 +514,13 @@ function openImportUsers() {
 }
 
 function openResetPassword(user) {
+  const formatted = formatTempPassword(user.name, user.studentId);
   const modal = openModal({
     title: `RESET PASSWORD — ${user.name}`,
     body: `<p class="hint">Resetting signs out existing sessions and requires ${escapeHtml(user.name)} to choose a new password at next sign-in.</p>
       <form id="reset-password-form" style="margin-top:14px">
-        <label class="radio-row"><input type="radio" name="resetMode" value="generate" checked /> GENERATE A TEMPORARY PASSWORD</label>
+        <label class="radio-row"><input type="radio" name="resetMode" value="format" checked /> USE NAME + LAST 3 PRN DIGITS</label>
+        <p class="hint" style="margin-left:24px">TEMPORARY PASSWORD: <code class="inline-code">${escapeHtml(formatted)}</code></p>
         <label class="radio-row"><input type="radio" name="resetMode" value="custom" /> ENTER A TEMPORARY PASSWORD</label>
         <div id="custom-password-field" class="field" hidden style="margin-top:14px">
           <label for="reset-password-input">TEMPORARY PASSWORD <span class="required">*</span></label>
@@ -543,9 +553,71 @@ function openResetPassword(user) {
     const submit = $('button[type="submit"]', form);
     setLoading(submit, true);
     try {
-      const response = await api.admin.resetPassword(user._id, values.resetMode === 'custom' ? values.password : '');
+      const response = await api.admin.resetPassword(user._id, values.resetMode === 'custom' ? values.password : '', values.resetMode);
       modal.body.innerHTML = `<div class="password-result">
         <p class="hint">Temporary password for <strong>${escapeHtml(user.name)}</strong>:</p>
+        <code class="inline-code">${escapeHtml(response.temporaryPassword)}</code>
+        <p class="hint">Share it securely. It will not be shown again.</p>
+      </div>
+      <div class="modal-actions"><button class="btn btn-accent" type="button" data-done>DONE</button></div>`;
+      $('[data-done]', modal.body).addEventListener('click', () => { modal.close(); renderAdmin(); });
+      toast(response.message, 'success');
+    } catch (error) {
+      if (error.details?.length) showFieldErrors(form, error.details);
+      toast(error.message, 'error');
+      setLoading(submit, false);
+    }
+  });
+}
+
+function openResolveReset(requestId, name, studentId) {
+  const formatted = formatTempPassword(name, studentId);
+  const modal = openModal({
+    title: `RESET PASSWORD — ${name}`,
+    body: `<p class="hint">Choose the temporary password for ${escapeHtml(name)}. This closes the ticket and signs out their current session.</p>
+      <form id="resolve-reset-form" style="margin-top:14px">
+        <label class="radio-row"><input type="radio" name="resetMode" value="format" checked /> USE NAME + LAST 3 PRN DIGITS</label>
+        <p class="hint" style="margin-left:24px">TEMPORARY PASSWORD: <code class="inline-code">${escapeHtml(formatted)}</code></p>
+        <label class="radio-row"><input type="radio" name="resetMode" value="custom" /> ENTER A TEMPORARY PASSWORD</label>
+        <div id="resolve-password-field" class="field" hidden style="margin-top:14px">
+          <label for="resolve-password-input">TEMPORARY PASSWORD <span class="required">*</span></label>
+          <input id="resolve-password-input" name="password" type="text" autocomplete="off" />
+          <small class="error-text" data-error="password"></small>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-cancel>CANCEL</button>
+          <button class="btn btn-accent" type="submit">RESET &amp; RESOLVE</button>
+        </div>
+      </form>`
+  });
+
+  const form = $('#resolve-reset-form', modal.body);
+  const customField = $('#resolve-password-field', modal.body);
+  $$('input[name="resetMode"]', form).forEach((radio) => {
+    radio.addEventListener('change', () => { customField.hidden = $('input[name="resetMode"]:checked', form).value !== 'custom'; });
+  });
+  $('[data-cancel]', modal.body).addEventListener('click', () => modal.close());
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearFormErrors(form);
+    const values = Object.fromEntries(new FormData(form).entries());
+    if (values.resetMode === 'custom' && ((values.password || '').length < 8 || !/[A-Za-z]/.test(values.password || '') || !/\d/.test(values.password || ''))) {
+      showFieldErrors(form, [{ field: 'password', message: 'Use 8+ characters with a letter and a number.' }]);
+      return;
+    }
+
+    const submit = $('button[type="submit"]', form);
+    setLoading(submit, true);
+    try {
+      const response = await api.admin.resolveResetRequest(
+        requestId,
+        'resolved',
+        values.resetMode === 'custom' ? values.password : '',
+        values.resetMode
+      );
+      modal.body.innerHTML = `<div class="password-result">
+        <p class="hint">Temporary password for <strong>${escapeHtml(name)}</strong>:</p>
         <code class="inline-code">${escapeHtml(response.temporaryPassword)}</code>
         <p class="hint">Share it securely. It will not be shown again.</p>
       </div>
@@ -670,36 +742,12 @@ export function initAdmin() {
     }
 
     if (aaction === 'reset-password') {
-      openResetPassword({ _id: id, name: button.dataset.name || 'this user' });
+      openResetPassword({ _id: id, name: button.dataset.name || 'this user', studentId: button.dataset.prn || '' });
       return;
     }
 
     if (aaction === 'resolve-reset') {
-      const name = button.dataset.name || 'this user';
-      const confirmed = await confirmAction({
-        title: 'RESET PASSWORD?',
-        message: `Generate a temporary password for ${name} and close this ticket? Their current session will end.`,
-        confirmLabel: 'YES, RESET'
-      });
-      if (!confirmed) return;
-      setLoading(button, true);
-      try {
-        const response = await api.admin.resolveResetRequest(id, 'resolved');
-        const result = openModal({
-          title: `PASSWORD RESET — ${name}`,
-          body: `<div class="password-result">
-            <p class="hint">Temporary password for <strong>${escapeHtml(name)}</strong>:</p>
-            <code class="inline-code">${escapeHtml(response.temporaryPassword)}</code>
-            <p class="hint">Share it securely. It will not be shown again.</p>
-          </div>
-          <div class="modal-actions"><button class="btn btn-accent" type="button" data-done>DONE</button></div>`
-        });
-        $('[data-done]', result.body).addEventListener('click', () => { result.close(); renderAdmin(); });
-        toast(response.message, 'success');
-      } catch (error) {
-        toast(error.message, 'error');
-        setLoading(button, false);
-      }
+      openResolveReset(id, button.dataset.name || 'this user', button.dataset.prn || '');
       return;
     }
 

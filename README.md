@@ -255,7 +255,7 @@ All endpoints are prefixed with `/api`. JSON bodies are expected unless noted. S
 - **User** — name, email, studentId (PRN), department, phone, hashed password, role (`user`/`admin`), `mustChangePassword`, `tokenVersion`.
 - **Item** — title, type (`lost`/`found`), category, description, location, date, imageUrl, status (`active`/`claimed`/`resolved`/`archived`), reportedBy, timestamps. Text indexes power search.
 - **Claim** — item, claimant, proof, status (`pending`/`approved`/`rejected`), reviewedAt, reviewedBy, timestamps. One claim per user per item; approving a claim rejects others and marks the item as claimed.
-- **ResetRequest** — user, status (`pending`/`resolved`/`rejected`), optional note, resolvedAt, resolvedBy, timestamps. Only one pending ticket per user; resolving generates a temporary password and signs out existing sessions.
+- **ResetRequest** — user, status (`pending`/`resolved`/`rejected`), optional note, resolvedAt, resolvedBy, timestamps. Only one pending ticket per user; resolving sets a temporary password (`firstname@last3PRN` by default, or admin-supplied) and signs out existing sessions.
 
 ---
 

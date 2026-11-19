@@ -160,7 +160,7 @@ p {
 
 .brand {
   --logo-h: 40px;
-  --logo-w: 34px;
+  --logo-w: 40px;
   display: inline-flex;
   align-items: center;
   gap: clamp(7px, 2vw, 10px);
@@ -1304,7 +1304,7 @@ td .btn {
 
 .auth-brand {
   --logo-h: 38px;
-  --logo-w: 32px;
+  --logo-w: 38px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1548,7 +1548,7 @@ td .btn {
 @media (min-width: 620px) {
   .brand {
     --logo-h: 46px;
-    --logo-w: 39px;
+    --logo-w: 46px;
   }
 
   .form-grid {
@@ -1579,7 +1579,7 @@ td .btn {
 
   .brand {
     --logo-h: 52px;
-    --logo-w: 44px;
+    --logo-w: 52px;
   }
 
   .header-top {

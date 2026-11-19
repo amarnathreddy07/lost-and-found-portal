@@ -7,13 +7,13 @@
   <meta name="description" content="Campus Lost and Found Portal for Sai University — report, search and claim campus items." />
   <meta name="api-base" content="https://lost-and-found-portal-uxit.onrender.com" />
   <title>SAI LOST &amp; FOUND — Campus Portal</title>
-  <link id="favicon" rel="icon" type="image/png" href="assets/saiu-logo-bw.png" />
+  <link id="favicon" rel="icon" type="image/png" href="assets/sai-find-logo.png" />
   <script>
     (function () {
       var favicon = document.getElementById('favicon');
       var dark = window.matchMedia('(prefers-color-scheme: dark)');
       function updateFavicon() {
-        favicon.href = dark.matches ? 'assets/saiu-logo-white.png' : 'assets/saiu-logo-bw.png';
+        favicon.href = dark.matches ? 'assets/sai-find-logo-white.png' : 'assets/sai-find-logo.png';
       }
       updateFavicon();
       if (dark.addEventListener) dark.addEventListener('change', updateFavicon);
@@ -28,7 +28,7 @@
   <header class="site-header">
     <div class="header-top shell">
       <a class="brand" href="#home" data-nav="home" aria-label="Sai University Lost and Found home">
-        <img class="brand-logo" src="assets/saiu-logo-bw.png" alt="" aria-hidden="true" />
+        <img class="brand-logo" src="assets/sai-find-logo.png" alt="" aria-hidden="true" />
         <span class="brand-copy">
           <strong>LOST &amp; FOUND</strong>
           <small>CAMPUS PORTAL // EST. 2026</small>
