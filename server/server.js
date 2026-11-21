@@ -95,6 +95,12 @@ app.get('/styles.css', (_req, res) => {
   res.sendFile(path.join(rootDir, 'styles.css'));
 });
 
+app.get('/manifest.webmanifest', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('application/manifest+json');
+  res.sendFile(path.join(rootDir, 'manifest.webmanifest'));
+});
+
 app.use('/api', (_req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
